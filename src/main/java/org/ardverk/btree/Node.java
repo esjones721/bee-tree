@@ -8,6 +8,8 @@ import java.util.List;
 
 class Node<K, V> {
 
+    private final Node.Id nodeId = Node.Id.create();
+    
     private final List<Entry<K, V>> entries;
     
     public Node(int pageSize) {
@@ -28,5 +30,8 @@ class Node<K, V> {
     
     public static class Id {
 
+        public static Id create() {
+            return new Id();
+        }
     }
 }
