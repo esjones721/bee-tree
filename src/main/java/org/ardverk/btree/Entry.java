@@ -28,6 +28,10 @@ class Entry<K, V> implements Map.Entry<K, V> {
         this.next = next;
     }
 
+    public boolean isLeaf() {
+        return next == null;
+    }
+    
     @Override
     public K getKey() {
         return key;
@@ -52,10 +56,10 @@ class Entry<K, V> implements Map.Entry<K, V> {
         StringBuilder sb = new StringBuilder();
         sb.append(key);
         
-        if (next != null) {
-            sb.append(" -> ").append(next);
-        } else {
+        if (isLeaf()) {
             sb.append("=").append(value);
+        } else {
+            sb.append(" -> ").append(next);
         }
         
         return sb.toString();
