@@ -8,28 +8,28 @@ class Entry<K, V> implements Map.Entry<K, V> {
     
     private final V value;
     
-    private final Node.Id next;
+    private final Node.Id nodeId;
     
     public Entry(K key, V value) {
         this(key, value, null);
     }
     
-    public Entry(K key, Node.Id next) {
-        this(key, null, next);
+    public Entry(K key, Node.Id nodeId) {
+        this(key, null, nodeId);
     }
     
-    private Entry(K key, V value, Node.Id next) {
-        if (next != null && value != null) {
+    private Entry(K key, V value, Node.Id nodeId) {
+        if (nodeId != null && value != null) {
             throw new IllegalStateException();
         }
         
         this.key = key;
         this.value = value;
-        this.next = next;
+        this.nodeId = nodeId;
     }
 
     public boolean isLeaf() {
-        return next == null;
+        return nodeId == null;
     }
     
     @Override
@@ -47,8 +47,8 @@ class Entry<K, V> implements Map.Entry<K, V> {
         throw new UnsupportedOperationException();
     }
     
-    public Node.Id getNextId() {
-        return next;
+    public Node.Id getNodeId() {
+        return nodeId;
     }
     
     @Override
@@ -59,7 +59,7 @@ class Entry<K, V> implements Map.Entry<K, V> {
         if (isLeaf()) {
             sb.append("=").append(value);
         } else {
-            sb.append(" -> ").append(next);
+            sb.append(" -> ").append(nodeId);
         }
         
         return sb.toString();
