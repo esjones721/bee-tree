@@ -1,15 +1,23 @@
 package org.ardverk.btree;
 
-import org.ardverk.btree.NodeProvider.Intent;
+import org.ardverk.btree.PageProvider.Intent;
 
 public class DefaultBeeTree<K, V> extends AbstractBeeTree<K, V> {
 
-    private final NodeProvider<K, V> provider = null;
+    private final PageProvider<K, V> provider 
+        = new DefaultPageProvider<K, V>();
 
     @Override
     public V put(K key, V value) {
-        Node.Id rootId = provider.getRootId();
-        Node<K, V> root = provider.get(rootId, Intent.WRITE);
-        return root.put(key, value);
+        Page.Id rootId = provider.getRootId();
+        Page<K, V> root = provider.get(rootId, Intent.WRITE);
+        return root.put(provider, key, value);
+    }
+    
+    @Override
+    public V get(K key) {
+        Page.Id rootId = provider.getRootId();
+        Page<K, V> root = provider.get(rootId, Intent.READ);
+        return root.get(provider, key);
     }
 }
