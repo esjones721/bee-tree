@@ -27,9 +27,12 @@ class Page<K, V> implements Cloneable {
     private final int maxSize = 10;
     
     public Page(Comparator<? super K> comparator, boolean leaf) {
+        this(new TreeMap<K, Node<K,V>>(comparator), leaf);
+    }
+    
+    private Page(NavigableMap<K, Node<K, V>> entries, boolean leaf) {
+        this.entries = entries;
         this.leaf = leaf;
-        
-        entries = new TreeMap<K, Node<K,V>>(comparator);
     }
     
     public long getTimeStamp() {
@@ -119,6 +122,42 @@ class Page<K, V> implements Cloneable {
         
         return null;
     }*/
+    
+    public Page<K, V>[] split() {
+        
+        Comparator<? super K> comparator = entries.comparator();
+        
+        NavigableMap<K, Node<K, V>> left 
+            = new TreeMap<K, Node<K,V>>(comparator);
+        
+        NavigableMap<K, Node<K, V>> right 
+            = new TreeMap<K, Node<K,V>>(comparator);
+        
+        int index = 0;
+        int m = entries.size() / 2;
+        
+        Node<K, V> median = null;
+        
+        for (Node<K, V> entry : entries.values()) {
+            
+            K key = entry.getKey();
+            
+            if (index < m) {
+                left.put(key, entry);
+            } else if (index == m) {
+                
+            } else {
+                right.put(key, entry);
+            }
+            
+            ++index;
+        }
+        
+        Page<K, V> p1 = new Page<K, V>(left, leaf);
+        Page<K, V> p2 = new Page<K, V>(right, leaf);
+        
+        return new Page[] { p1, p2 };
+    }
     
     public Page<K, V> shadow() {
         if (referenceCount() == 1) {

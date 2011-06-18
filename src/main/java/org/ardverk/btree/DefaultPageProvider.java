@@ -1,23 +1,19 @@
 package org.ardverk.btree;
 
-import java.util.AbstractSet;
-import java.util.Collection;
 import java.util.Comparator;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.ardverk.btree.Page.Id;
+import org.ardverk.btree.Page2.Id;
 
-public class DefaultPageProvider<K, V> implements PageProvider<K, V> {
+public class DefaultPageProvider<K, V> implements PageProvider2<K, V> {
 
-    private final Map<Id, Page<K, V>> pages 
-        = new ConcurrentHashMap<Id, Page<K, V>>();
+    private final Map<Id, Page2<K, V>> pages 
+        = new ConcurrentHashMap<Id, Page2<K, V>>();
     
     private final Comparator<? super K> comparator;
     
-    private volatile Page<K, V> root;
+    public volatile Page2<K, V> root;
     
     public DefaultPageProvider() {
         this(DefaultComparator.create());
@@ -26,8 +22,7 @@ public class DefaultPageProvider<K, V> implements PageProvider<K, V> {
     public DefaultPageProvider(Comparator<? super K> comparator) {
         this.comparator = comparator;
         
-        root = new Page<K, V>(comparator, true);
-        pages.put(root.getPageId(), root);
+        root = create(true);
     }
     
     @Override
@@ -36,8 +31,8 @@ public class DefaultPageProvider<K, V> implements PageProvider<K, V> {
     }
 
     @Override
-    public Page<K, V> get(Id nodeId, Intent intent) {
-        Page<K, V> node = pages.get(nodeId);
+    public Page2<K, V> get(Id pageId, Intent intent) {
+        Page2<K, V> node = pages.get(pageId);
         
         /*if (intent == Intent.WRITE) {
             Page<K, V> shadow = node.shadow();
@@ -54,15 +49,16 @@ public class DefaultPageProvider<K, V> implements PageProvider<K, V> {
     
     
     @Override
-    public void add(Page<K, V> page) {
-        pages.put(page.getPageId(), page);
+    public Page2<K, V> create(boolean leaf) {
+        return add(new Page2<K, V>(leaf));
     }
 
     @Override
-    public Page<K, V> get(Node<? extends K, ? extends V> node, Intent intent) {
-        return get(node.getPageId(), intent);
+    public Page2<K, V> add(Page2<K, V> node) {
+        pages.put(node.getPageId(), node);
+        return node;
     }
-    
+
     @Override
     public Comparator<? super K> comparator() {
         return comparator;
