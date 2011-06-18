@@ -84,7 +84,7 @@ class Page2<K, V> implements RandomAccess, Iterable<Node2<K, V>> {
             Comparator<? super K> comparator = provider.comparator();
             int index = NodeUtils.binarySearch(nodes, key, comparator);
             
-            Node2<K, V> node = get(Math.abs(index));
+            Node2<K, V> node = get(Math.min(Math.abs(index), nodes.size()-1));
             
             if (key.equals(node.getKey())) {
                 return node.getValue();
