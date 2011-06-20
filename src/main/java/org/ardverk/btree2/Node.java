@@ -78,6 +78,14 @@ public class Node<K, V> {
         return node.get(provider, key);
     }
     
+    public Entry<K, V> put(NodeProvider<K, V> provider, K key, V value) {
+        return null;
+    }
+    
+    public Entry<K, V> split() {
+        return null;
+    }
+    
     public static class Id {
         
     }
