@@ -1,4 +1,4 @@
-package org.ardverk.btree;
+package org.ardverk.btree2;
 
 import java.util.Map;
 
