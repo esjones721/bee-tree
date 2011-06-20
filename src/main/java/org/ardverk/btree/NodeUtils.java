@@ -17,7 +17,6 @@ public class NodeUtils {
             int mid = (low + high) >>> 1;
             
             Node2<? extends K, ?> node = list.get(mid);
-            System.out.println(node + ", " + list);
             
             int cmp = comparator.compare(node.getKey(), key);
 

@@ -1,6 +1,5 @@
 package org.ardverk.btree;
 
-import org.ardverk.btree.PageProvider2.Intent;
 
 public class Node2<K, V> {
 
@@ -40,28 +39,8 @@ public class Node2<K, V> {
         return pageId;
     }
     
-    public Node2<K, V> split(PageProvider2<K, V> provider) {
-        Page2<K, V> src = getPage(provider, Intent.WRITE);
-        Page2<K, V> dst = provider.create(false);
-        
-        int size = src.size();
-        int m = size/2;
-        
-        Node2<K, V> median = src.remove(m);
-        for (int i = 1; i < m; i++) {
-            // TODO: Optimize remove() !!!
-            dst.add(src.remove(m));
-        }
-        
-        return new Node2<K, V>(median, dst.getPageId());
-    }
-    
-    public Page2<K, V> getPage(PageProvider2<K, V> provider, Intent intent) {
-        return provider.get(pageId, intent);
-    }
-    
     @Override
     public String toString() {
-        return key != null ? key.toString() : "null";
+        return key + "=" + value + " -> " + pageId;
     }
 }

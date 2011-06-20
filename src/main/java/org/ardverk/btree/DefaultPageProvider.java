@@ -1,15 +1,15 @@
 package org.ardverk.btree;
 
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.ardverk.btree.Page2.Id;
 
 public class DefaultPageProvider<K, V> implements PageProvider2<K, V> {
 
-    private final Map<Id, Page2<K, V>> pages 
-        = new ConcurrentHashMap<Id, Page2<K, V>>();
+    public final Map<Id, Page2<K, V>> pages 
+        = new LinkedHashMap<Id, Page2<K, V>>();
     
     private final Comparator<? super K> comparator;
     

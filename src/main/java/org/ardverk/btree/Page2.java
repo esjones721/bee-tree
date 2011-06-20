@@ -1,15 +1,19 @@
 package org.ardverk.btree;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.RandomAccess;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.ardverk.btree.PageProvider2.Intent;
 
 class Page2<K, V> implements RandomAccess, Iterable<Node2<K, V>> {
 
+    private static final int t = 4;
+    
     private final Id pageId;
     
     private final List<Node2<K, V>> nodes;
@@ -52,21 +56,14 @@ class Page2<K, V> implements RandomAccess, Iterable<Node2<K, V>> {
     }
     
     public boolean isFull() {
-        return size() >= 4;
+        return size() >= 2 * t - 1;
     }
     
     public void add(Node2<K, V> node) {
-        if (node == null) {
-            Thread.dumpStack();
-        }
-        
         nodes.add(node);
     }
     
     public void add(int index, Node2<K, V> node) {
-        if (node == null) {
-            Thread.dumpStack();
-        }
         nodes.add(index, node);
     }
     
@@ -84,14 +81,23 @@ class Page2<K, V> implements RandomAccess, Iterable<Node2<K, V>> {
             Comparator<? super K> comparator = provider.comparator();
             int index = NodeUtils.binarySearch(nodes, key, comparator);
             
-            Node2<K, V> node = get(Math.min(Math.abs(index), nodes.size()-1));
+            if (index < 0) {
+                index = -index - 1;
+            }
+            
+            index = Math.min(index, nodes.size()-1);
+            
+            Node2<K, V> node = get(index);
             
             if (key.equals(node.getKey())) {
                 return node.getValue();
             }
             
-            Page2<K, V> child = provider.get(node.getPageId(), Intent.READ);
-            return child.get(provider, key);
+            if (!leaf) {
+                Page2.Id pageId = node.getPageId();
+                Page2<K, V> child = provider.get(pageId, Intent.READ);
+                return child.get(provider, key);
+            }
         }
         
         return null;
@@ -101,7 +107,6 @@ class Page2<K, V> implements RandomAccess, Iterable<Node2<K, V>> {
         Comparator<? super K> comparator = provider.comparator();
         
         int index = NodeUtils.binarySearch(nodes, key, comparator);
-        System.out.println("a: " + System.identityHashCode(this) + ": " + nodes.size() + ", " + index + ", " + key);
         
         if (leaf) {
             if (index < 0) {
@@ -113,57 +118,117 @@ class Page2<K, V> implements RandomAccess, Iterable<Node2<K, V>> {
                 nodes.set(index, node);
             }
             
-            System.out.println(nodes);
-            
         } else {
             
-            System.out.println("b: " + System.identityHashCode(this) + ": " + nodes.size() + ", " + index + ", " + key);
-            
             if (index < 0) {
-                index = -index;
+                index = -index - 1;
             }
             
             index = Math.min(index, nodes.size()-1);
             
             Node2<K, V> foo = get(index);
-            Page2<K, V> page = foo.getPage(provider, Intent.WRITE);
+            Page2<K, V> page = provider.get(foo.getPageId(), Intent.WRITE);
             
             if (page.isFull()) {
-                Node2<K, V> bla = page.split2(provider);
-                add(index, bla);
-                page = provider.get(bla.getPageId(), Intent.WRITE);
+                
+                System.out.println("Splitting for: key=" + key + ", foo=" 
+                        + foo + ", this=" + this + ", page=" + page);
+                
+                Node2<K, V> median = page.split(provider);
+                add(index, median);
+                /*add(median);
+                Collections.sort(nodes, new Comparator<Node2<K, V>>() {
+                    @Override
+                    public int compare(Node2<K, V> o1, Node2<K, V> o2) {
+                        return ((Comparable<K>)o1.getKey()).compareTo(o2.getKey());
+                    }
+                });*/
+                page = provider.get(median.getPageId(), Intent.WRITE);
+                
+                System.out.println("AFTER: " + this);
+                System.out.println(key + " into " + median + " vs. " + foo);
             }
             
             page.put(provider, key, value);
         }
     }
     
-    /*public Page2<K, V> split(PageProvider2<K, V> provider, int index) {
-        return split(provider, index, nodes.get(index));
-    }
-    
-    public Page2<K, V> split(PageProvider2<K, V> provider, int index, Node2<K, V> node) {
-        Node2<K, V> bla = node.split(provider);
-        nodes.add(index, bla);
-        return bla.getPage(provider, Intent.WRITE);
-    }*/
-    
-    public Node2<K, V> split2(PageProvider2<K, V> provider) {
+    public Node2<K, V> split(PageProvider2<K, V> provider) {
         Page2<K, V> dst = provider.create(leaf);
         
         int size = size();
         int m = size/2;
         
+        List<Node2<K, V>> copy = new ArrayList<Node2<K,V>>(nodes);
+        
         Node2<K, V> median = remove(m);
-        for (int i = 1; i < m; i++) {
+        for (int i = 0; i < m; i++) {
             // TODO: Optimize remove() !!!
-            dst.add(remove(m));
+            dst.add(remove(0));
         }
+        
+        System.out.println("SPLIT: " + pageId + " from " + copy 
+                + " to " + dst.nodes + "(" + dst.pageId + ") and " 
+                + nodes + "(" + pageId + ")");
+        
+        System.out.println("LEFT: " + dst);
+        System.out.println("MEDIAN: " + new Node2<K, V>(median, dst.getPageId()));
+        System.out.println("RIGHT: " + this);
         
         return new Node2<K, V>(median, dst.getPageId());
     }
     
+    @Override
+    public String toString() {
+        return pageId + " -> " + nodes;
+    }
+    
+    public String toString(PageProvider2<K, V> provider) {
+        StringBuilder sb = new StringBuilder();
+        
+        sb.append(pageId).append("\n");
+        for (Node2<K, V> node : nodes) {
+            sb.append(" ").append(node.getKey())
+                .append("=").append(node.getValue())
+                .append(" -> ").append(node.getPageId())
+                .append("\n");
+            
+            Page2.Id foo = node.getPageId();
+            if (foo != null) {
+                Page2<K, V> page = provider.get(foo, Intent.READ);
+                sb.append(page.toString(provider));
+            }
+        }
+        
+        return sb.toString();
+    }
+    
     public static class Id {
         
+        private static final AtomicInteger COUNTER = new AtomicInteger();
+        
+        private final int value = COUNTER.incrementAndGet();
+        
+        @Override
+        public int hashCode() {
+            return value;
+        }
+        
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            } else if (!(o instanceof Id)) {
+                return false;
+            }
+            
+            Id other = (Id)o;
+            return value == other.value;
+        }
+        
+        @Override
+        public String toString() {
+            return Integer.toString(value);
+        }
     }
 }
