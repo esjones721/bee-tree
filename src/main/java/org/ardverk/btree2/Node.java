@@ -44,6 +44,14 @@ public class Node<K, V> {
         return size() >= 2*t;
     }
     
+    public void add(Entry<K, V> entry) {
+        entries.add(entry);
+    }
+    
+    public void add(Id nodeId) {
+        nodes.add(nodeId);
+    }
+    
     public Entry<K, V> get(NodeProvider<K, V> provider, K key) {
         if (!isEmpty()) {
             Comparator<? super K> comparator = provider.comparator();
@@ -83,6 +91,8 @@ public class Node<K, V> {
         Comparator<? super K> comparator = provider.comparator();
         int index = EntryUtils.binarySearch(entries, key, comparator);
         
+        System.out.println("INDEX: " + index + " for " + key + " @ " + nodeId);
+        
         if (leaf) {
             
             Entry<K, V> existing = null;
@@ -99,19 +109,15 @@ public class Node<K, V> {
             index = -index - 1;
         }
         
-        int pos = Math.min(size(), index);
-        Entry<K, V> entry = entries.get(pos);
-        
-        int diff = comparator.compare(key, entry.getKey());
-        
-        Id nodeId = null;
-        if (diff < 0) {
-            nodeId = nodes.get(index);
-        } else {
-            nodeId = nodes.get(index + 1);
-        }
-        
+        Id nodeId = nodes.get(index);
         Node<K, V> node = provider.get(nodeId, Intent.WRITE);
+        
+        if (node.isFull()) {
+            Split<K, V> split = node.split(provider);
+            
+            entries.add(index, split.getMedian());
+            nodes.add(index+1, split.getNodeId());
+        }
         
         return node.put(provider, key, value);
     }
@@ -158,6 +164,14 @@ public class Node<K, V> {
         public Split(Entry<K, V> median, Id nodeId) {
             this.median = median;
             this.nodeId = nodeId;
+        }
+
+        public Entry<K, V> getMedian() {
+            return median;
+        }
+
+        public Id getNodeId() {
+            return nodeId;
         }
     }
     

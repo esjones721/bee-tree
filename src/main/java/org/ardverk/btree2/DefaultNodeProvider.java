@@ -31,7 +31,6 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         return node;
     }
     
-    
     @Override
     public Node<K, V> create(boolean leaf) {
         return add(new Node<K, V>(leaf));
@@ -50,11 +49,16 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     public void put(K key, V value) {
         if (root.isFull()) {
             Node<K, V> tmp = create(false);
+            
             Split<K, V> split = root.split(this);
             
-            
+            tmp.add(root.getId());
+            tmp.add(split.getMedian());
+            tmp.add(split.getNodeId());
             
             root = tmp;
+            
+            System.out.println(nodes);
         }
         
         root.put(this, key, value);
@@ -68,12 +72,22 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         t.put("C", "C");
         t.put("G", "G");
         t.put("N", "N");
-        
         System.out.println(t.root);
         
         t.put("H", "H");
-        
         System.out.println(t.root);
+        
+        t.put("E", "E");
+        t.put("K", "K");
+        t.put("Q", "Q");
+        System.out.println(t.root);
+        
+        System.out.println(t.nodes);
+        
+        t.put("M", "M");
+        System.out.println(t.root);
+        
+        System.out.println(t.nodes);
     }
     
     private static class DefaultComparator<K> implements Comparator<K> {
