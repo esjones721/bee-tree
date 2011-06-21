@@ -1,6 +1,7 @@
 package org.ardverk.btree2;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -197,5 +198,131 @@ public class Node<K, V> {
         public String toString() {
             return Integer.toString(value);
         }
+    }
+    
+    private static class Bucket<E> {
+        
+        private final Object[] elements;
+        
+        private int size = 0;
+        
+        public Bucket(int maxSize) {
+            elements = new Object[maxSize];
+        }
+        
+        public int size() {
+            return size;
+        }
+        
+        public boolean isEmpty() {
+            return size() == 0;
+        }
+        
+        public boolean isFull() {
+            return size() >= elements.length;
+        }
+        
+        public void add(E element) {
+            add(size, element);
+        }
+        
+        public void add(int index, E element) {
+            if (index < 0 || size < index) {
+                throw new IndexOutOfBoundsException();
+            }
+            
+            if (isFull()) {
+                throw new IllegalStateException();
+            }
+            
+            if (index != size) {
+                System.arraycopy(elements, index, elements, index + 1, size - index);
+            }
+            
+            elements[index] = element;
+            ++size;
+        }
+        
+        public E set(int index, E element) {
+            if (index < 0 || index >= size()) {
+                throw new IndexOutOfBoundsException();
+            }
+            
+            E current = (E)elements[index];
+            elements[index] = element;
+            return current;
+        }
+        
+        public E remove(int index) {
+            if (index < 0 || index >= size()) {
+                throw new IndexOutOfBoundsException();
+            }
+            
+            E element = (E)elements[index];
+            
+            int moved = size - index - 1;
+            if (moved > 0) {
+                System.arraycopy(elements, index+1, elements, index, moved);
+            }
+            
+            elements[--size] = null;
+            
+            return element;
+        }
+        
+        public void clear() {
+            Arrays.fill(null, elements);
+            size = 0;
+        }
+        
+        public Bucket<E> divide() {
+            return split(size/2);
+        }
+        
+        public Bucket<E> split(int index) {
+            Bucket<E> bucket = new Bucket<E>(elements.length);
+            
+            final int max = size;
+            
+            while (index < max) {
+                E element = (E)elements[index];
+                elements[index++] = null;
+                
+                bucket.add(element);
+                --size;
+            }
+            
+            return bucket;
+        }
+        
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder("[");
+            
+            if (!isEmpty()) {
+                for (int i = 0; i < size; i++) {
+                    sb.append(elements[i]).append(", ");
+                }
+                
+                sb.setLength(sb.length()-2);
+            }
+            
+            return sb.append("]").toString();
+        }
+    }
+    
+    public static void main(String[] args) {
+        Bucket<String> b = new Bucket<String>(10);
+        b.add("A");
+        //b.add("B");
+        //b.add("C");
+        //b.add("D");
+        //b.add("E");
+        //b.add("F");
+        
+        Bucket<String> o = b.divide();
+        
+        System.out.println(b);
+        System.out.println(o);
     }
 }
