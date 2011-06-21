@@ -64,6 +64,11 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         root.put(this, key, value);
     }
     
+    public V get(K key) {
+        Entry<K, V> entry = root.get(this, key);
+        return entry != null ? entry.getValue() : null;
+    }
+    
     public static void main(String[] args) {
         DefaultNodeProvider<String, String> t 
             = new DefaultNodeProvider<String, String>();
@@ -72,22 +77,46 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         t.put("C", "C");
         t.put("G", "G");
         t.put("N", "N");
-        System.out.println(t.root);
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
         
         t.put("H", "H");
-        System.out.println(t.root);
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
         
         t.put("E", "E");
         t.put("K", "K");
         t.put("Q", "Q");
-        System.out.println(t.root);
-        
-        System.out.println(t.nodes);
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
         
         t.put("M", "M");
-        System.out.println(t.root);
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
         
-        System.out.println(t.nodes);
+        t.put("Z", "Z");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        t.put("X", "X");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        t.put("XX", "XX");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        t.put("XXX", "XXX");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println("1: " + t.get("N"));
+        System.out.println("2: " + t.get("M"));
+        System.out.println("3: " + t.get("Q"));
+        System.out.println("4: " + t.get("Z"));
+        System.out.println("5: " + t.get("X"));
+        System.out.println("6: " + t.get("XX"));
+        System.out.println("7: " + t.get("XXX"));
     }
     
     private static class DefaultComparator<K> implements Comparator<K> {

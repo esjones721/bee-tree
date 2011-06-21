@@ -71,18 +71,7 @@ public class Node<K, V> {
     }
     
     private Entry<K, V> get(NodeProvider<K, V> provider, K key, int index) {
-        Entry<K, V> entry = entries.get(index);
-        
-        Comparator<? super K> comparator = provider.comparator();
-        int diff = comparator.compare(key, entry.getKey());
-        
-        Id nodeId = null;
-        if (diff < 0) {
-            nodeId = nodes.get(index);
-        } else {
-            nodeId = nodes.get(index + 1);
-        }
-        
+        Id nodeId = nodes.get(index);
         Node<K, V> node = provider.get(nodeId, Intent.READ);
         return node.get(provider, key);
     }
@@ -105,18 +94,23 @@ public class Node<K, V> {
             return existing;
         }
         
-        if (index < 0) {
-            index = -index - 1;
-        }
+        assert (index < 0);
+        index = -index - 1;
         
         Id nodeId = nodes.get(index);
         Node<K, V> node = provider.get(nodeId, Intent.WRITE);
         
         if (node.isFull()) {
+            
+            System.out.println("-BEFORE-: " + entries + " " + nodes);
+            
             Split<K, V> split = node.split(provider);
             
             entries.add(index, split.getMedian());
             nodes.add(index+1, split.getNodeId());
+            
+            System.out.println("-AFTER-: " + entries + " " + nodes);
+            
         }
         
         return node.put(provider, key, value);
