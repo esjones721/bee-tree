@@ -106,11 +106,15 @@ public class Node<K, V> {
             
             Split<K, V> split = node.split(provider);
             
-            entries.add(index, split.getMedian());
+            Entry<K, V> median = split.getMedian();
+            entries.add(index, median);
             nodes.add(index+1, split.getNodeId());
             
             System.out.println("-AFTER-: " + entries + " " + nodes);
             
+            if (comparator.compare(key, median.getKey()) > 0) {
+                node = provider.get(nodes.get(index+1), Intent.WRITE);
+            }
         }
         
         return node.put(provider, key, value);

@@ -110,6 +110,10 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("ROOT: " + t.root);
         System.out.println("NODES: " + t.nodes);
         
+        t.put("Roger", "Roger");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
         System.out.println("1: " + t.get("N"));
         System.out.println("2: " + t.get("M"));
         System.out.println("3: " + t.get("Q"));
@@ -117,6 +121,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("5: " + t.get("X"));
         System.out.println("6: " + t.get("XX"));
         System.out.println("7: " + t.get("XXX"));
+        System.out.println("7: " + t.get("Roger"));
     }
     
     private static class DefaultComparator<K> implements Comparator<K> {
