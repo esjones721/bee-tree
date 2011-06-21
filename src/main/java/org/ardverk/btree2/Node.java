@@ -1,6 +1,7 @@
 package org.ardverk.btree2;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -9,7 +10,7 @@ import org.ardverk.btree2.NodeProvider.Intent;
 
 public class Node<K, V> {
 
-    private static final int t = 2;
+    private static final int t = 4;
     
     private final List<Entry<K, V>> entries = new ArrayList<Entry<K, V>>(2*t-1);
     
@@ -41,7 +42,7 @@ public class Node<K, V> {
     }
     
     public boolean isFull() {
-        return size() >= 2*t;
+        return size() >= 2*t-1;
     }
     
     public void add(Entry<K, V> entry) {
@@ -64,15 +65,19 @@ public class Node<K, V> {
             
             // Didn't find it but know where to look for it!
             if (!leaf) {
-                return get(provider, key, -index - 1);
+                return get(provider, key, -index - 1, Intent.READ);
             }
         }
         return null;
     }
     
-    private Entry<K, V> get(NodeProvider<K, V> provider, K key, int index) {
+    private Node<K, V> get(NodeProvider<K, V> provider, int index, Intent intent) {
         Id nodeId = nodes.get(index);
-        Node<K, V> node = provider.get(nodeId, Intent.READ);
+        return provider.get(nodeId, intent);
+    }
+    
+    private Entry<K, V> get(NodeProvider<K, V> provider, K key, int index, Intent intent) {
+        Node<K, V> node = get(provider, index, intent);
         return node.get(provider, key);
     }
     
@@ -80,40 +85,32 @@ public class Node<K, V> {
         Comparator<? super K> comparator = provider.comparator();
         int index = EntryUtils.binarySearch(entries, key, comparator);
         
-        System.out.println("INDEX: " + index + " for " + key + " @ " + nodeId);
-        
-        if (leaf) {
-            
-            Entry<K, V> existing = null;
-            if (index < 0) {
-                entries.add(-index - 1, new Entry<K, V>(key, value));
-            } else {
-                existing = entries.set(index, new Entry<K, V>(key, value));
-            }
-            
-            return existing;
+        if (index >= 0) {
+            return entries.set(index, new Entry<K, V>(key, value));
         }
         
         assert (index < 0);
         index = -index - 1;
         
-        Id nodeId = nodes.get(index);
-        Node<K, V> node = provider.get(nodeId, Intent.WRITE);
+        if (leaf) {
+            assert (!isFull());
+            
+            entries.add(index, new Entry<K, V>(key, value));
+            return null;
+        }
+        
+        Node<K, V> node = get(provider, index, Intent.WRITE);
         
         if (node.isFull()) {
-            
-            System.out.println("-BEFORE-: " + entries + " " + nodes);
-            
             Split<K, V> split = node.split(provider);
             
             Entry<K, V> median = split.getMedian();
             entries.add(index, median);
             nodes.add(index+1, split.getNodeId());
             
-            System.out.println("-AFTER-: " + entries + " " + nodes);
-            
-            if (comparator.compare(key, median.getKey()) > 0) {
-                node = provider.get(nodes.get(index+1), Intent.WRITE);
+            int cmp = comparator.compare(key, median.getKey());
+            if (cmp > 0) {
+                node = get(provider, index + 1, Intent.WRITE);
             }
         }
         
@@ -121,31 +118,32 @@ public class Node<K, V> {
     }
     
     public Split<K, V> split(NodeProvider<K, V> provider) {
-        Node<K, V> dst = provider.create(leaf);
+        // I'm left!
+        Node<K, V> right = provider.create(leaf);
         
-        int size = size();
+        int size = entries.size();
         int m = size/2;
         
-        System.out.println("BEFORE: " + this);
+        //System.out.println("split().before: " + this);
         
         Entry<K, V> median = entries.remove(m);
         for (int i = 0; i < (size-m-1); i++) {
-            dst.entries.add(entries.remove(m));
+            right.entries.add(entries.remove(m));
             
             if (!leaf) {
-                dst.nodes.add(nodes.remove(m));
+                right.nodes.add(nodes.remove(m+1));
             }
         }
         
         if (!leaf) {
-            dst.nodes.add(nodes.remove(m));
+            right.nodes.add(nodes.remove(m+1));
         }
         
-        System.out.println("MEDIAN: " + median);
-        System.out.println("LEFT: " + this);
-        System.out.println("RIGHT: " + dst);
+        //System.out.println("split().median: " + median);
+        //System.out.println("split().left: " + this);
+        //System.out.println("split().right: " + dst);
         
-        return new Split<K, V>(median, dst.getId());
+        return new Split<K, V>(median, right.getId());
     }
     
     @Override
@@ -200,5 +198,131 @@ public class Node<K, V> {
         public String toString() {
             return Integer.toString(value);
         }
+    }
+    
+    private static class Bucket<E> {
+        
+        private final Object[] elements;
+        
+        private int size = 0;
+        
+        public Bucket(int maxSize) {
+            elements = new Object[maxSize];
+        }
+        
+        public int size() {
+            return size;
+        }
+        
+        public boolean isEmpty() {
+            return size() == 0;
+        }
+        
+        public boolean isFull() {
+            return size() >= elements.length;
+        }
+        
+        public void add(E element) {
+            add(size, element);
+        }
+        
+        public void add(int index, E element) {
+            if (index < 0 || size < index) {
+                throw new IndexOutOfBoundsException();
+            }
+            
+            if (isFull()) {
+                throw new IllegalStateException();
+            }
+            
+            if (index != size) {
+                System.arraycopy(elements, index, elements, index + 1, size - index);
+            }
+            
+            elements[index] = element;
+            ++size;
+        }
+        
+        public E set(int index, E element) {
+            if (index < 0 || index >= size()) {
+                throw new IndexOutOfBoundsException();
+            }
+            
+            E current = (E)elements[index];
+            elements[index] = element;
+            return current;
+        }
+        
+        public E remove(int index) {
+            if (index < 0 || index >= size()) {
+                throw new IndexOutOfBoundsException();
+            }
+            
+            E element = (E)elements[index];
+            
+            int moved = size - index - 1;
+            if (moved > 0) {
+                System.arraycopy(elements, index+1, elements, index, moved);
+            }
+            
+            elements[--size] = null;
+            
+            return element;
+        }
+        
+        public void clear() {
+            Arrays.fill(null, elements);
+            size = 0;
+        }
+        
+        public Bucket<E> divide() {
+            return split(size/2);
+        }
+        
+        public Bucket<E> split(int index) {
+            Bucket<E> bucket = new Bucket<E>(elements.length);
+            
+            final int max = size;
+            
+            while (index < max) {
+                E element = (E)elements[index];
+                elements[index++] = null;
+                
+                bucket.add(element);
+                --size;
+            }
+            
+            return bucket;
+        }
+        
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder("[");
+            
+            if (!isEmpty()) {
+                for (int i = 0; i < size; i++) {
+                    sb.append(elements[i]).append(", ");
+                }
+                
+                sb.setLength(sb.length()-2);
+            }
+            
+            return sb.append("]").toString();
+        }
+    }
+    
+    public static void main(String[] args) {
+        Bucket<String> b = new Bucket<String>(10);
+        b.add("A");
+        //b.add("B");
+        //b.add("C");
+        //b.add("D");
+        //b.add("E");
+        //b.add("F");
+        
+        Bucket<String> o = b.divide();
+        
+        System.out.println(b);
+        System.out.println(o);
     }
 }
