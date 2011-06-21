@@ -58,7 +58,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
             
             root = tmp;
             
-            System.out.println(nodes);
+            //System.out.println(nodes);
         }
         
         root.put(this, key, value);
@@ -73,7 +73,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         DefaultNodeProvider<String, String> t 
             = new DefaultNodeProvider<String, String>();
         
-        t.put("A", "A");
+        /*t.put("A", "A");
         t.put("C", "C");
         t.put("G", "G");
         t.put("N", "N");
@@ -110,6 +110,10 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("ROOT: " + t.root);
         System.out.println("NODES: " + t.nodes);
         
+        t.put("Roger", "Roger");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
         System.out.println("1: " + t.get("N"));
         System.out.println("2: " + t.get("M"));
         System.out.println("3: " + t.get("Q"));
@@ -117,6 +121,29 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("5: " + t.get("X"));
         System.out.println("6: " + t.get("XX"));
         System.out.println("7: " + t.get("XXX"));
+        System.out.println("8: " + t.get("Roger"));*/
+        
+        long startTime = System.currentTimeMillis();
+        int count = 0;
+        for (int i = 'A'; i <= 'Z'; i++) {
+            for (int j = 0; j < 1000; j++) {
+                String key = Character.toString((char)i);
+                for (int k = 0; k < j; k++) {
+                    key += Character.toString((char)i);
+                }
+                
+                t.put(key, key);
+                ++count;
+                
+                String found = t.get(key);
+                if (found == null || !found.equals(key)) {
+                    throw new IllegalStateException("key=" + key + ", found=" + found);
+                }
+            }
+        }
+        
+        long time = System.currentTimeMillis() - startTime;
+        System.out.println("Done: " + count + ", " + time);
     }
     
     private static class DefaultComparator<K> implements Comparator<K> {
