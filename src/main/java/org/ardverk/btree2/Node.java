@@ -103,9 +103,9 @@ public class Node<K, V> {
         Node<K, V> node = getNode(provider, index, Intent.WRITE);
         
         if (node.isFull()) {
-            Split<K, V> split = node.split(provider);
+            Median<K, V> split = node.split(provider);
             
-            Entry<K, V> median = split.getMedian();
+            Entry<K, V> median = split.getEntry();
             entries.add(index, median);
             nodes.add(index+1, split.getNodeId());
             
@@ -118,7 +118,7 @@ public class Node<K, V> {
         return node.put(provider, key, value);
     }
     
-    public Split<K, V> split(NodeProvider<K, V> provider) {
+    public Median<K, V> split(NodeProvider<K, V> provider) {
         // I'm left!
         Node<K, V> right = provider.create(leaf);
         
@@ -139,7 +139,7 @@ public class Node<K, V> {
             right.add(nodes.remove(m+1));
         }
         
-        return new Split<K, V>(median, right.getId());
+        return new Median<K, V>(median, right.getId());
     }
     
     @Override
@@ -147,23 +147,28 @@ public class Node<K, V> {
         return nodeId + " @ " + entries + ", " + nodes;
     }
     
-    public static class Split<K, V> {
+    public static class Median<K, V> {
         
-        private final Entry<K, V> median;
+        private final Entry<K, V> entry;
         
         private final Id nodeId;
 
-        public Split(Entry<K, V> median, Id nodeId) {
-            this.median = median;
+        private Median(Entry<K, V> entry, Id nodeId) {
+            this.entry = entry;
             this.nodeId = nodeId;
         }
 
-        public Entry<K, V> getMedian() {
-            return median;
+        public Entry<K, V> getEntry() {
+            return entry;
         }
 
         public Id getNodeId() {
             return nodeId;
+        }
+        
+        @Override
+        public String toString() {
+            return entry + ", " + nodeId;
         }
     }
     
@@ -193,6 +198,126 @@ public class Node<K, V> {
         @Override
         public String toString() {
             return Integer.toString(value);
+        }
+    }
+    
+    private static class Bucket2<E> {
+        
+        private final Object[] elements;
+        
+        private final Id[] nodeIds;
+        
+        private int size = 0;
+        
+        public Bucket2(int maxSize) {
+            elements = new Object[maxSize-1];
+            nodeIds = new Id[maxSize];
+        }
+        
+        public int size() {
+            return size;
+        }
+        
+        public boolean isEmpty() {
+            return size() == 0;
+        }
+        
+        public boolean isFull() {
+            return size() >= elements.length;
+        }
+        
+        public boolean add(E element) {
+            add(size, element);
+            return true;
+        }
+        
+        public void add(int index, E element) {
+            add(index, element, null);
+        }
+        
+        public void add(int index, E element, Id nodeId) {
+            if (index != size) {
+                System.arraycopy(elements, index, elements, index + 1, size - index);
+                
+                if (nodeId != null) {
+                    System.arraycopy(nodeIds, index+1, nodeIds, index + 2, size - index + 1);
+                }
+            }
+            
+            elements[index] = element;
+            
+            if (nodeId != null) {
+                nodeIds[index+1] = nodeId;
+            }
+            
+            ++size;
+        }
+        
+        public E set(int index, E element) {
+            E existing = (E)elements[index];
+            elements[index] = element;
+            return existing;
+        }
+        
+        public E get(int index) {
+            return (E)elements[index];
+        }
+        
+        public Id getNodeId(int index) {
+            return nodeIds[index];
+        }
+        
+        public Bucket2<E> split() {
+            return split((int)Math.ceil(size/2d));
+        }
+        
+        private Bucket2<E> split(int p) {
+            Bucket2<E> bucket = new Bucket2<E>(nodeIds.length);
+            
+            int length = size - p;
+            for (int i = 0; i < length; i++) {
+                int idx = i + p;
+                bucket.elements[i] = elements[idx];
+                elements[idx] = null;
+                
+                bucket.nodeIds[i] = nodeIds[idx];
+                nodeIds[idx] = null;
+            }
+            
+            int idx = length + 1;
+            bucket.nodeIds[idx] = nodeIds[idx];
+            nodeIds[idx] = null;
+            
+            bucket.size = length;
+            size -= length;
+            
+            return bucket;
+        }
+        
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder("[");
+            
+            sb.append(size)
+                .append(toString(elements, 0, size))
+                .append(", ")
+                .append(toString(nodeIds, 0, size+1));
+            
+            return sb.append("]").toString();
+        }
+        
+        private static <E> String toString(E[] elements, int offset, int length) {
+            StringBuilder sb = new StringBuilder("[");
+            
+            if (0 < length) {
+                for (int i = 0; i < length; i++) {
+                    sb.append(elements[offset+i]).append(", ");
+                }
+                
+                sb.setLength(sb.length()-2);
+            }
+            
+            return sb.append("]").toString();
         }
     }
     
@@ -291,32 +416,21 @@ public class Node<K, V> {
             return bucket;
         }
         
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder("[");
-            
-            if (!isEmpty()) {
-                for (int i = 0; i < size; i++) {
-                    sb.append(elements[i]).append(", ");
-                }
-                
-                sb.setLength(sb.length()-2);
-            }
-            
-            return sb.append("]").toString();
-        }
+        
     }
     
     public static void main(String[] args) {
-        Bucket<String> b = new Bucket<String>(10);
-        b.add("A");
-        //b.add("B");
-        //b.add("C");
-        //b.add("D");
-        //b.add("E");
-        //b.add("F");
+        Bucket2<String> b = new Bucket2<String>(8);
         
-        Bucket<String> o = b.divide();
+        b.add("P");
+        b.add("Q");
+        b.add("R");
+        b.add("S");
+        b.add("T");
+        b.add("U");
+        b.add("V");
+        
+        Bucket2<String> o = b.split();
         
         System.out.println(b);
         System.out.println(o);
