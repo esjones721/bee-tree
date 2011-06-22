@@ -52,8 +52,9 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
             
             Split<K, V> split = root.split(this);
             
-            tmp.add(root.getId());
             tmp.add(split.getMedian());
+            
+            tmp.add(root.getId());
             tmp.add(split.getNodeId());
             
             root = tmp;
@@ -72,6 +73,17 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     public static void main(String[] args) {
         DefaultNodeProvider<String, String> t 
             = new DefaultNodeProvider<String, String>();
+        
+        t.put("A", "A");
+        t.put("D", "D");
+        t.put("F", "F");
+        t.put("H", "H");
+        t.put("L", "L");
+        t.put("N", "N");
+        t.put("P", "P");
+        t.put("X", "X");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
         
         /*t.put("A", "A");
         t.put("C", "C");

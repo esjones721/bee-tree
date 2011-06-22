@@ -65,19 +65,20 @@ public class Node<K, V> {
             
             // Didn't find it but know where to look for it!
             if (!leaf) {
-                return get(provider, key, -index - 1, Intent.READ);
+                return getEntry(provider, key, -index - 1, Intent.READ);
             }
         }
         return null;
     }
     
-    private Node<K, V> get(NodeProvider<K, V> provider, int index, Intent intent) {
+    private Node<K, V> getNode(NodeProvider<K, V> provider, int index, Intent intent) {
         Id nodeId = nodes.get(index);
         return provider.get(nodeId, intent);
     }
     
-    private Entry<K, V> get(NodeProvider<K, V> provider, K key, int index, Intent intent) {
-        Node<K, V> node = get(provider, index, intent);
+    private Entry<K, V> getEntry(NodeProvider<K, V> provider, 
+            K key, int index, Intent intent) {
+        Node<K, V> node = getNode(provider, index, intent);
         return node.get(provider, key);
     }
     
@@ -99,7 +100,7 @@ public class Node<K, V> {
             return null;
         }
         
-        Node<K, V> node = get(provider, index, Intent.WRITE);
+        Node<K, V> node = getNode(provider, index, Intent.WRITE);
         
         if (node.isFull()) {
             Split<K, V> split = node.split(provider);
@@ -109,8 +110,8 @@ public class Node<K, V> {
             nodes.add(index+1, split.getNodeId());
             
             int cmp = comparator.compare(key, median.getKey());
-            if (cmp > 0) {
-                node = get(provider, index + 1, Intent.WRITE);
+            if (0 < cmp) {
+                node = getNode(provider, index + 1, Intent.WRITE);
             }
         }
         
@@ -123,25 +124,20 @@ public class Node<K, V> {
         
         int size = entries.size();
         int m = size/2;
-        
-        //System.out.println("split().before: " + this);
+        assert (m == t-1);
         
         Entry<K, V> median = entries.remove(m);
         for (int i = 0; i < (size-m-1); i++) {
-            right.entries.add(entries.remove(m));
+            right.add(entries.remove(m));
             
             if (!leaf) {
-                right.nodes.add(nodes.remove(m+1));
+                right.add(nodes.remove(m+1));
             }
         }
         
         if (!leaf) {
-            right.nodes.add(nodes.remove(m+1));
+            right.add(nodes.remove(m+1));
         }
-        
-        //System.out.println("split().median: " + median);
-        //System.out.println("split().left: " + this);
-        //System.out.println("split().right: " + dst);
         
         return new Split<K, V>(median, right.getId());
     }
