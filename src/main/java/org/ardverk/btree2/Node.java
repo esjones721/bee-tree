@@ -10,11 +10,11 @@ import org.ardverk.btree2.NodeProvider.Intent;
 
 public class Node<K, V> {
 
-    private static final int t = 4;
+    private static final int t = 1;
     
-    private final List<Entry<K, V>> entries = new ArrayList<Entry<K, V>>(2*t-1);
+    private final List<Entry<K, V>> entries = new ArrayList<Entry<K, V>>(2*t);
     
-    private final List<Id> nodes = new ArrayList<Id>(2*t);
+    private final List<Id> nodes = new ArrayList<Id>(2*t+1);
     
     private final Id nodeId;
     
@@ -42,7 +42,7 @@ public class Node<K, V> {
     }
     
     public boolean isFull() {
-        return size() >= 2*t-1;
+        return size() >= 2*t;
     }
     
     public void add(Entry<K, V> entry) {
@@ -95,7 +95,6 @@ public class Node<K, V> {
         
         if (leaf) {
             assert (!isFull());
-            
             entries.add(index, new Entry<K, V>(key, value));
             return null;
         }
@@ -103,13 +102,16 @@ public class Node<K, V> {
         Node<K, V> node = getNode(provider, index, Intent.WRITE);
         
         if (node.isFull()) {
+            
+            System.out.println("--- NODE: " + node);
+            
             Median<K, V> split = node.split(provider);
             
-            Entry<K, V> median = split.getEntry();
-            entries.add(index, median);
+            Entry<K, V> entry = split.getEntry();
+            entries.add(index, entry);
             nodes.add(index+1, split.getNodeId());
             
-            int cmp = comparator.compare(key, median.getKey());
+            int cmp = comparator.compare(key, entry.getKey());
             if (0 < cmp) {
                 node = getNode(provider, index + 1, Intent.WRITE);
             }
@@ -126,7 +128,7 @@ public class Node<K, V> {
         int m = size/2;
         assert (m == t-1);
         
-        Entry<K, V> median = entries.remove(m);
+        /*Entry<K, V> median = entries.remove(m);
         for (int i = 0; i < (size-m-1); i++) {
             right.add(entries.remove(m));
             
@@ -137,6 +139,17 @@ public class Node<K, V> {
         
         if (!leaf) {
             right.add(nodes.remove(m+1));
+        }*/
+        
+        Entry<K, V> median = entries.remove(t);
+        for (int i = 0; i < t-1; i++) {
+            right.add(entries.remove(t));
+        }
+        
+        if (!leaf) {
+            for (int i = 0; i < t; i++) {
+                right.add(nodes.remove(t));
+            }
         }
         
         return new Median<K, V>(median, right.getId());
@@ -210,8 +223,8 @@ public class Node<K, V> {
         private int size = 0;
         
         public Bucket2(int maxSize) {
-            elements = new Object[maxSize-1];
-            nodeIds = new Id[maxSize];
+            elements = new Object[maxSize];
+            nodeIds = new Id[maxSize+1];
         }
         
         public int size() {
@@ -272,7 +285,7 @@ public class Node<K, V> {
         }
         
         private Bucket2<E> split(int p) {
-            Bucket2<E> bucket = new Bucket2<E>(nodeIds.length);
+            Bucket2<E> bucket = new Bucket2<E>(elements.length);
             
             int length = size - p;
             for (int i = 0; i < length; i++) {

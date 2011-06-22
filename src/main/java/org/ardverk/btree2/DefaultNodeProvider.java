@@ -49,6 +49,8 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     
     public void put(K key, V value) {
         if (root.isFull()) {
+            System.out.println("Splitting root!");
+            
             Node<K, V> tmp = create(false);
             
             Median<K, V> split = root.split(this);
@@ -75,7 +77,29 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         DefaultNodeProvider<String, String> t 
             = new DefaultNodeProvider<String, String>();
         
-        t.put("A", "A");
+        t.put("1", "1");
+        t.put("2", "2");
+        t.put("3", "3");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        t.put("4", "4");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        t.put("5", "5");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println("---");
+        t.put("6", "6");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        //t.put("7", "7");
+        
+        
+        /*t.put("A", "A");
         t.put("D", "D");
         t.put("F", "F");
         t.put("H", "H");
@@ -84,7 +108,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         t.put("P", "P");
         t.put("X", "X");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.nodes);*/
         
         /*t.put("A", "A");
         t.put("C", "C");
@@ -105,9 +129,9 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         
         t.put("M", "M");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.nodes);*/
         
-        t.put("Z", "Z");
+        /*t.put("Z", "Z");
         System.out.println("ROOT: " + t.root);
         System.out.println("NODES: " + t.nodes);
         
@@ -136,7 +160,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("7: " + t.get("XXX"));
         System.out.println("8: " + t.get("Roger"));*/
         
-        long startTime = System.currentTimeMillis();
+        /*long startTime = System.currentTimeMillis();
         int count = 0;
         for (int i = 'A'; i <= 'Z'; i++) {
             for (int j = 0; j < 1000; j++) {
@@ -156,7 +180,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         }
         
         long time = System.currentTimeMillis() - startTime;
-        System.out.println("Done: " + count + ", " + time);
+        System.out.println("Done: " + count + ", " + time);*/
     }
     
     private static class DefaultComparator<K> implements Comparator<K> {
