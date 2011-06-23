@@ -9,76 +9,80 @@ import org.ardverk.btree3.NodeProvider.Intent;
 
 class Node<K, V> {
     
-    private static final int t = 256;
+    private static final int t = 2;
     
     private final Id nodeId = new Id();
     
     private final List<Entry<K, V>> entries 
-        = new ArrayList<Entry<K, V>>(16);
+        = new ArrayList<Entry<K, V>>(2*t-1);
     
-    public Node() {
-        this(null);
-    }
+    private final List<Id> nodes 
+        = new ArrayList<Id>(2*t);
     
-    public Node(Id childId) {
-        // A B-Tree has n-keys and n+1 children! This is dummy Entry that 
-        // is always stored at the front of the List and doesn't hold anything 
-        // but the additional child node. Reason: We can use a single Array.
-        entries.add(new Entry<K, V>(null, null, childId));
+    public Node(Id init) {
+        if (init != null) {
+            nodes.add(init);
+        }
     }
     
     public Id getId() {
         return nodeId;
     }
     
-    public int size() {
-        return entries.size() - 1;
+    public int getNodeCount() {
+        return nodes.size();
+    }
+    
+    public int getEntryCount() {
+        return entries.size();
     }
     
     public boolean isEmpty() {
-        return size() == 0;
+        return getEntryCount() == 0;
     }
     
     public boolean isFull() {
-        return size() >= 2*t-1;
+        return getEntryCount() >= 2*t-1;
+    }
+    
+    private boolean isUnderflow() {
+        return getEntryCount() < t;
     }
     
     public boolean isLeaf() {
-        Entry<K, V> entry = entries.get(0);
-        return entry.getNodeId() == null;
+        return nodes.isEmpty();
     }
     
     private Entry<K, V> getEntry(int index) {
-        return entries.get(1 + index);
+        return entries.get(index);
     }
     
     private Entry<K, V> removeEntry(int index) {
-        return entries.remove(1 + index);
+        return entries.remove(index);
     }
     
-    private Entry<K, V> firstEntry(boolean remove) {
-        if (!isEmpty()) {
-            if (remove) {
-                return removeEntry(0);
-            }
-            return getEntry(0);
-        }
-        return null;
+    private Id removeNode(int index) {
+        return nodes.remove(index);
     }
     
-    private Entry<K, V> lastEntry(boolean remove) {
-        if (!isEmpty()) {
-            if (remove) {
-                return removeEntry(size()-1);
-            }
-            return getEntry(size()-1);
-        }
-        return null;
+    private Entry<K, V> firstEntry() {
+        return getEntry(0);
+    }
+    
+    private Entry<K, V> lastEntry() {
+        return getEntry(getEntryCount()-1);
+    }
+    
+    private Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
+        return getNode(provider, 0, intent);
+    }
+    
+    private Node<K, V> lastNode(NodeProvider<K, V> provider, Intent intent) {
+        return getNode(provider, getNodeCount()-1, intent);
     }
     
     private Id getNodeId(int index) {
-        Entry<K, V> entry = entries.get(index);
-        return entry.getNodeId();
+        return nodes.get(index);
     }
     
     private Node<K, V> getNode(NodeProvider<K, V> provider, 
@@ -94,46 +98,58 @@ class Node<K, V> {
     }
     
     private Entry<K, V> set(int index, K key, V value) {
-        Entry<K, V> existing = entries.get(index + 1);
-        entries.set(index + 1, new Entry<K, V>(key, value, existing));
-        return existing;
+        return set(index, new Entry<K, V>(key, value));
+    }
+    
+    private Entry<K, V> set(int index, Entry<K, V> entry) {
+        return entries.set(index, entry);
     }
     
     public void add(Entry<K, V> entry) {
-        add(size(), entry);
+        add(getEntryCount(), entry);
     }
     
-    private void add(NodeProvider<K, V> provider, Entry<K, V> entry) {
+    /*private void add(NodeProvider<K, V> provider, Entry<K, V> entry) {
         int index = binarySearch(provider, entry.getKey());
         if (index < 0) {
             index = -index - 1;
         }
         
         add(index, entry);
+    }*/
+    
+    private void add(int index, K key, V value) {
+        add(index, new Entry<K, V>(key, value));
     }
     
     private void add(int index, Entry<K, V> entry) {
-        entries.add(index + 1, entry);
+        entries.add(index, entry);
+    }
+    
+    public void add(Id nodeId) {
+        nodes.add(nodeId);
+    }
+    
+    private void add(int index, Id nodeId) {
+        nodes.add(index, nodeId);
     }
     
     private int binarySearch(NodeProvider<K, V> provider, K key) {
         Comparator<? super K> comparator = provider.comparator();
-        return EntryUtils.binarySearch(entries.subList(1, entries.size()), key, comparator);
+        return EntryUtils.binarySearch(entries, key, comparator);
     }
     
     public Entry<K, V> get(NodeProvider<K, V> provider, K key) {
-        if (!isEmpty()) {
-            int index = binarySearch(provider, key);
-            
-            // Found the Key?
-            if (index >= 0) {
-                return getEntry(index);
-            }
-            
-            // Didn't find it but know where to look for it!
-            if (!isLeaf()) {
-                return getEntry(provider, key, -index - 1, Intent.READ);
-            }
+        int index = binarySearch(provider, key);
+        
+        // Found the Key?
+        if (index >= 0) {
+            return getEntry(index);
+        }
+        
+        // Didn't find it but know where to look for it!
+        if (!isLeaf()) {
+            return getEntry(provider, key, -index - 1, Intent.READ);
         }
         return null;
     }
@@ -150,7 +166,7 @@ class Node<K, V> {
         
         if (isLeaf()) {
             assert (!isFull());
-            add(index, new Entry<K, V>(key, value));
+            add(index, key, value);
             return null;
         }
         
@@ -158,11 +174,13 @@ class Node<K, V> {
         
         if (node.isFull()) {
             
-            Entry<K, V> entry = node.split(provider);
-            add(index, entry);
+            Median<K, V> median = node.split(provider);
+            
+            add(index, median.getEntry());
+            add(index+1, median.getNodeId());
             
             Comparator<? super K> comparator = provider.comparator();
-            int cmp = comparator.compare(key, entry.getKey());
+            int cmp = comparator.compare(key, median.getKey());
             if (0 < cmp) {
                 node = getNode(provider, index + 1, Intent.WRITE);
             }
@@ -171,54 +189,168 @@ class Node<K, V> {
         return node.put(provider, key, value);
     }
     
-    public Entry<K, V> split(NodeProvider<K, V> provider) {
+    public void remove(NodeProvider<K, V> provider, K key) {
         
-        int size = size();
-        int m = size/2;
+        int index = binarySearch(provider, key);
+        
+        if (isLeaf()) {
+            if (index >= 0) {
+                removeEntry(index);
+            }
+        } else {
+            
+            if (index >= 0) {
+                Node<K, V> y = leftChild(provider, index);
+                if (!y.isUnderflow()) {
+                    Entry<K, V> entry = y.largestEntry(provider);
+                    set(index, entry);
+                    y.remove(provider, entry.getKey());System.out.println("A");
+                } else {
+                    Node<K, V> z = rightChild(provider, index);
+                    if (!z.isUnderflow()) {
+                        Entry<K, V> entry = z.smallestEntry(provider);
+                        set(index, entry);
+                        z.remove(provider, entry.getKey());System.out.println("B");
+                    } else {
+                        // TODO: Not sure and delete Z!
+                        y.merge(this, index, z);
+                        y.remove(provider, key);System.out.println("C");
+                    }
+                }
+            } else {
+                assert (index < 0);
+                index = -index - 1;
+                
+                Node<K, V> node = getNode(provider, index, Intent.WRITE);
+                
+                if (node.isUnderflow()) {
+                    if (index == getNodeCount()-1) {
+                        Node<K, V> left = getNode(provider, index-1, Intent.WRITE);
+                        if (!left.isUnderflow()) {
+                            
+                        } else {
+                            
+                        }
+                    } else {
+                        if (index == 0) {
+                            Node<K, V> right = getNode(provider, 1, Intent.WRITE);
+                            if (!right.isUnderflow()) {
+                                
+                            } else {
+                                
+                            }
+                        }
+                    }
+                }
+                
+                node.remove(provider, key);
+            }
+        }
+    }
+    
+    private void merge(Node<K, V> parent, int index, Node<K, V> src) {
+        System.out.println(parent + " @ " + index);
+        
+        Entry<K, V> entry = parent.removeEntry(index-1);
+        //Id nodeId = parent.removeNode(index);
+        
+        entries.add(entry);
+        //src.add(nodeId);
+        
+        entries.addAll(src.entries);
+        nodes.addAll(src.nodes);
+        
+        System.out.println("MERGED: " + this);
+    }
+    
+    private Node<K, V> leftChild(NodeProvider<K, V> provider, int index) {
+        return getNode(provider, index, Intent.WRITE);
+    }
+    
+    private Node<K, V> rightChild(NodeProvider<K, V> provider, int index) {
+        return getNode(provider, index+1, Intent.WRITE);
+    }
+    
+    private Entry<K, V> largestEntry(NodeProvider<K, V> provider) {
+        Node<K, V> node = this;
+        while (!node.isLeaf()) {
+            node = node.lastNode(provider, Intent.WRITE);
+        }
+        
+        return node.lastEntry();
+    }
+    
+    private Entry<K, V> smallestEntry(NodeProvider<K, V> provider) {
+        Node<K, V> node = this;
+        while (!node.isLeaf()) {
+            node = node.firstNode(provider, Intent.WRITE);
+        }
+        
+        return node.firstEntry();
+    }
+    
+    public Median<K, V> split(NodeProvider<K, V> provider) {
+        
+        boolean leaf = isLeaf();
+        
+        int entryCount = getEntryCount();
+        int m = entryCount/2;
         
         Entry<K, V> median = removeEntry(m);
         
-        Node<K, V> dst = provider.create(median.getNodeId());
-        
-        while (m < size()) {
-            dst.add(removeEntry(m));
+        Id nodeId = null;
+        if (!leaf) {
+            nodeId = removeNode(m+1);
         }
         
-        return new Entry<K, V>(median, dst.getId());
+        Node<K, V> dst = provider.create(nodeId);
+        
+        //System.out.println("BEFORE: " + this);
+        
+        while (m < getEntryCount()) {
+            dst.add(removeEntry(m));
+            
+            if (!leaf) {
+                dst.add(removeNode(m+1));
+            }
+        }
+        
+        //System.out.println("AFTER.l" + this);
+        //System.out.println("AFTER.r" + dst);
+        //System.out.println("AFTER.m" + median);
+        
+        return new Median<K, V>(median, dst.getId());
     }
     
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        
-        sb.append("[");
-        
-        if (!isEmpty()) {
-            boolean first = true;
-            for (Entry<K, V> entry : entries) {
-                if (first) {
-                    first = false;
-                    continue;
-                }
-                
-                sb.append(entry.getKey()).append("=")
-                    .append(entry.getValue()).append(", ");
-            }
-            sb.setLength(sb.length()-2);
-        }
-        
-        sb.append("] [");
-        
-        if (!entries.isEmpty()) {
-            for (Entry<K, V> entry : entries) {
-                sb.append(entry.getNodeId()).append(", ");
-            }
-            sb.setLength(sb.length()-2);
-        }
-        
-        sb.append("]");
-        
+        sb.append(entries).append(nodes);
         return sb.toString();
+    }
+    
+    public static class Median<K, V> {
+        
+        private final Entry<K, V> entry;
+        
+        private final Id nodeId;
+        
+        public Median(Entry<K, V> entry, Id nodeId) {
+            this.entry = entry;
+            this.nodeId = nodeId;
+        }
+
+        public K getKey() {
+            return entry.getKey();
+        }
+        
+        public Entry<K, V> getEntry() {
+            return entry;
+        }
+
+        public Id getNodeId() {
+            return nodeId;
+        }
     }
     
     public static class Id {

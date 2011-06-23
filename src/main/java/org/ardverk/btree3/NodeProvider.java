@@ -11,7 +11,7 @@ public interface NodeProvider<K, V> {
         WRITE;
     }
     
-    public Node<K, V> create(Id childId);
+    public Node<K, V> create(Id init);
     
     public Node<K, V> register(Node<K, V> node);
     

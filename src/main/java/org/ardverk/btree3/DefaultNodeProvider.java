@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.ardverk.btree3.Node.Id;
+import org.ardverk.btree3.Node.Median;
 
 
 public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
@@ -32,8 +33,8 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     }
     
     @Override
-    public Node<K, V> create(Id childId) {
-        return register(new Node<K, V>(childId));
+    public Node<K, V> create(Id init) {
+        return register(new Node<K, V>(init));
     }
 
     @Override
@@ -54,10 +55,12 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     
     public void put(K key, V value) {
         if (root.isFull()) {
-            Entry<K, V> entry = root.split(this);
+            Median<K, V> median = root.split(this);
             
             Node<K, V> tmp = create(root.getId());
-            tmp.add(entry);
+            
+            tmp.add(median.getEntry());
+            tmp.add(median.getNodeId());
             
             root = tmp;
         }
@@ -68,6 +71,10 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     public V get(K key) {
         Entry<K, V> entry = root.get(this, key);
         return entry != null ? entry.getValue() : null;
+    }
+    
+    public void remove(K key) {
+        root.remove(this, key);
     }
     
     public static void main(String[] args) {
@@ -105,6 +112,16 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("NODES: " + t.nodes);
         
         t.put("4", "4");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("8");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("7");
         System.out.println("ROOT: " + t.root);
         System.out.println("NODES: " + t.nodes);
         
@@ -185,7 +202,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("7: " + t.get("XXX"));
         System.out.println("8: " + t.get("Roger"));*/
         
-        long startTime = System.currentTimeMillis();
+        /*long startTime = System.currentTimeMillis();
         int count = 0;
         for (int i = 'A'; i <= 'Z'; i++) {
             for (int j = 0; j < 1000; j++) {
@@ -205,7 +222,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         }
         
         long time = System.currentTimeMillis() - startTime;
-        System.out.println("Done: " + count + ", " + time);
+        System.out.println("Done: " + count + ", " + time);*/
     }
     
     private static class DefaultComparator<K> implements Comparator<K> {
