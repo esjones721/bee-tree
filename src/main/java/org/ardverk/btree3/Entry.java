@@ -60,12 +60,8 @@ class Entry<K, V> implements Map.Entry<K, V> {
         
         if (key != null) {
             sb.append(key).append("=").append(value);
-            
-            if (nodeId != null) {
-                sb.append(" -> ").append(nodeId);
-            }
         } else if (nodeId != null) {
-            sb.append(nodeId);
+            sb.append("@");
         }
         
         return sb.toString();

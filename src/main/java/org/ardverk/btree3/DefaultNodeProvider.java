@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.ardverk.btree3.Node.Id;
-import org.ardverk.btree3.Node.Median;
 
 
 public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
@@ -55,16 +54,10 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     
     public void put(K key, V value) {
         if (root.isFull()) {
-            System.out.println("SPLITTING ROOT: " + root);
-            
             Entry<K, V> entry = root.split(this);
             
             Node<K, V> tmp = create(root.getId());
-            
             tmp.add(entry);
-            
-            System.out.println("split: " + entry);
-            System.out.println("TMP: " + tmp);
             
             root = tmp;
         }

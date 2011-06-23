@@ -9,18 +9,21 @@ import org.ardverk.btree3.NodeProvider.Intent;
 
 class Node<K, V> {
     
-    private static final int t = 2;
+    private static final int t = 256;
     
     private final Id nodeId = new Id();
     
     private final List<Entry<K, V>> entries 
-        = new ArrayList<Entry<K, V>>(2*t);
+        = new ArrayList<Entry<K, V>>(16);
     
     public Node() {
         this(null);
     }
     
     public Node(Id childId) {
+        // A B-Tree has n-keys and n+1 children! This is dummy Entry that 
+        // is always stored at the front of the List and doesn't hold anything 
+        // but the additional child node. Reason: We can use a single Array.
         entries.add(new Entry<K, V>(null, null, childId));
     }
     
@@ -33,7 +36,7 @@ class Node<K, V> {
     }
     
     public boolean isEmpty() {
-        return size() != 0;
+        return size() == 0;
     }
     
     public boolean isFull() {
@@ -153,8 +156,6 @@ class Node<K, V> {
         
         Node<K, V> node = getNode(provider, index, Intent.WRITE);
         
-        System.out.println(index + " -> " + node + " // " + entries);
-        
         if (node.isFull()) {
             
             Entry<K, V> entry = node.split(provider);
@@ -175,15 +176,12 @@ class Node<K, V> {
         int size = size();
         int m = size/2;
         
-        System.out.println("SIZE: " + size);
-        System.out.println("M: " + m);
-        
         Entry<K, V> median = removeEntry(m);
         
         Node<K, V> dst = provider.create(median.getNodeId());
         
         while (m < size()) {
-            dst.entries.add(removeEntry(m));
+            dst.add(removeEntry(m));
         }
         
         return new Entry<K, V>(median, dst.getId());
@@ -191,32 +189,36 @@ class Node<K, V> {
     
     @Override
     public String toString() {
-        return nodeId + " @ " + entries;
-    }
-    
-    public static class Median<K, V> {
+        StringBuilder sb = new StringBuilder();
         
-        private final Entry<K, V> entry;
+        sb.append("[");
         
-        private final Id nodeId;
-
-        private Median(Entry<K, V> entry, Id nodeId) {
-            this.entry = entry;
-            this.nodeId = nodeId;
-        }
-
-        public Entry<K, V> getEntry() {
-            return entry;
-        }
-
-        public Id getNodeId() {
-            return nodeId;
+        if (!isEmpty()) {
+            boolean first = true;
+            for (Entry<K, V> entry : entries) {
+                if (first) {
+                    first = false;
+                    continue;
+                }
+                
+                sb.append(entry.getKey()).append("=")
+                    .append(entry.getValue()).append(", ");
+            }
+            sb.setLength(sb.length()-2);
         }
         
-        @Override
-        public String toString() {
-            return entry + ", " + nodeId;
+        sb.append("] [");
+        
+        if (!entries.isEmpty()) {
+            for (Entry<K, V> entry : entries) {
+                sb.append(entry.getNodeId()).append(", ");
+            }
+            sb.setLength(sb.length()-2);
         }
+        
+        sb.append("]");
+        
+        return sb.toString();
     }
     
     public static class Id {
