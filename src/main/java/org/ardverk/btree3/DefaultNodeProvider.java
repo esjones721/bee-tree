@@ -23,7 +23,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     
     public DefaultNodeProvider(Comparator<? super K> comparator) {
         this.comparator = comparator;
-        root = create(null);
+        root = allocate(null);
     }
 
     @Override
@@ -33,18 +33,14 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     }
     
     @Override
-    public Node<K, V> create(Id init) {
-        return register(new Node<K, V>(init));
-    }
-
-    @Override
-    public Node<K, V> register(Node<K, V> node) {
+    public Node<K, V> allocate(Id init) {
+        Node<K, V> node = new Node<K, V>(init);
         nodes.put(node.getId(), node);
         return node;
     }
-    
+
     @Override
-    public void unregister(Node<K, V> node) {
+    public void free(Node<? extends K, ? extends V> node) {
         nodes.remove(node.getId());
     }
 
@@ -57,7 +53,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         if (root.isFull()) {
             Median<K, V> median = root.split(this);
             
-            Node<K, V> tmp = create(root.getId());
+            Node<K, V> tmp = allocate(root.getId());
             
             tmp.add(median.getEntry());
             tmp.add(median.getNodeId());

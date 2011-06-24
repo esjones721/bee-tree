@@ -11,11 +11,9 @@ public interface NodeProvider<K, V> {
         WRITE;
     }
     
-    public Node<K, V> create(Id init);
+    public Node<K, V> allocate(Id init);
     
-    public Node<K, V> register(Node<K, V> node);
-    
-    public void unregister(Node<K, V> node);
+    public void free(Node<? extends K, ? extends V> node);
     
     public Node<K, V> get(Node.Id nodeId, Intent intent);
     

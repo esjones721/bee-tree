@@ -274,6 +274,8 @@ class Node<K, V> {
                             } else {
                                 // MERGE
                                 node.merge(this, index, z);
+                                Collections.reverse(node.entries);
+                                Collections.reverse(node.nodes);
                             }
                         } else {
                             // MERGE
@@ -289,8 +291,8 @@ class Node<K, V> {
                         } else {
                             // MERGE
                             node.merge(this, index, z);
-                            //Collections.reverse(node.entries);
-                            //Collections.reverse(node.nodes);
+                            Collections.reverse(node.entries);
+                            Collections.reverse(node.nodes);
                         }
                     } else {
                         // MERGE
@@ -376,7 +378,7 @@ class Node<K, V> {
             nodeId = removeNodeId(m+1);
         }
         
-        Node<K, V> dst = provider.create(nodeId);
+        Node<K, V> dst = provider.allocate(nodeId);
         
         //System.out.println("BEFORE: " + this);
         
