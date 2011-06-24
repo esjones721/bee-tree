@@ -4,20 +4,27 @@ import java.util.Comparator;
 
 import org.ardverk.btree.NodeProvider.Intent;
 
-class Node<K, V> {
-    
-    private static final int t = 2;
-    
-    private final Bucket<Entry<K, V>> entries 
-        = new Bucket<Entry<K, V>>(2*t-1);
-    
-    private final Bucket<NodeId> nodes 
-        = new Bucket<NodeId>(2*t);
+public class Node<K, V> {
     
     private final NodeId nodeId;
     
-    public Node(NodeId nodeId) {
+    private final Bucket<Entry<K, V>> entries;
+    
+    private final Bucket<NodeId> nodes;
+    
+    public Node(NodeId nodeId, int t, NodeId init) {
         this.nodeId = nodeId;
+        
+        entries = new Bucket<Entry<K, V>>(t, 2*t-1);
+        
+        Bucket<NodeId> nodes = null;
+        
+        if (init != null) {
+            nodes = new Bucket<NodeId>(-1, 2*t);
+            nodes.add(init);
+        }
+        
+        this.nodes = nodes;
     }
     
     public NodeId getNodeId() {
@@ -37,15 +44,16 @@ class Node<K, V> {
     }
     
     public boolean isOverflow() {
-        return getEntryCount() >= 2*t-1;
+        return entries.isOverflow();
     }
     
     public boolean isUnderflow() {
-        return getEntryCount() < t;
+        return entries.isUnderflow();
     }
     
     public boolean isLeaf() {
-        return nodes.isEmpty();
+        //return nodes.isEmpty();
+        return nodes == null;
     }
     
     private Entry<K, V> getEntry(int index) {
@@ -382,15 +390,6 @@ class Node<K, V> {
         }
         
         return new Median<K, V>(median, dst.getNodeId());
-    }
-    
-    public Node<K, V> copy(NodeProvider<K, V> provider) {
-        Node<K, V> dst = provider.allocate(null);
-        
-        dst.entries.addAll(entries);
-        dst.nodes.addAll(nodes);
-        
-        return dst;
     }
     
     @Override

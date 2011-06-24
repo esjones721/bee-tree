@@ -1,10 +1,10 @@
 package org.ardverk.btree;
 
 import java.util.Arrays;
-import java.util.Comparator;
 
 import org.ardverk.btree.Node.Median;
 import org.ardverk.btree.NodeProvider.Intent;
+import org.ardverk.btree.memory.InMemoryNodeProvider;
 
 public class BeeTree<K, V> {
 
@@ -13,11 +13,11 @@ public class BeeTree<K, V> {
     private Node<K, V> root;
     
     public BeeTree() {
-        this(DefaultComparator.create());
+        this(new InMemoryNodeProvider<K, V>());
     }
     
-    public BeeTree(Comparator<? super K> c) {
-        provider = new InMemoryNodeProvider<K, V>(c);
+    public BeeTree(NodeProvider<K, V> provider) {
+        this.provider = provider;
         
         root = provider.allocate(null);
     }

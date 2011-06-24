@@ -1,22 +1,26 @@
-package org.ardverk.btree;
+package org.ardverk.btree.memory;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class InMemoryNodeProvider<K, V> implements NodeProvider<K, V> {
+import org.ardverk.btree.AbstractNodeProvider;
+import org.ardverk.btree.Node;
+import org.ardverk.btree.NodeId;
 
+public class InMemoryNodeProvider<K, V> extends AbstractNodeProvider<K, V> {
+
+    private static final int t = 2;
+    
     public final Map<NodeId, Node<K, V>> nodes 
         = new LinkedHashMap<NodeId, Node<K, V>>();
     
-    private final Comparator<? super K> comparator;
-    
     public InMemoryNodeProvider() {
-        this(DefaultComparator.create());
+        super();
     }
-    
+
     public InMemoryNodeProvider(Comparator<? super K> comparator) {
-        this.comparator = comparator;
+        super(comparator);
     }
 
     @Override
@@ -26,11 +30,8 @@ public class InMemoryNodeProvider<K, V> implements NodeProvider<K, V> {
     
     @Override
     public Node<K, V> allocate(NodeId init) {
-        Node<K, V> node = new Node<K, V>(new NodeId());
-        
-        if (init != null) {
-            node.addLast(init);
-        }
+        NodeId nodeId = new InMemoryNodeId();
+        Node<K, V> node = new Node<K, V>(nodeId, t, init);
         
         nodes.put(node.getNodeId(), node);
         return node;
@@ -39,11 +40,6 @@ public class InMemoryNodeProvider<K, V> implements NodeProvider<K, V> {
     @Override
     public void free(Node<? extends K, ? extends V> node) {
         nodes.remove(node.getNodeId());
-    }
-
-    @Override
-    public Comparator<? super K> comparator() {
-        return comparator;
     }
     
     @Override

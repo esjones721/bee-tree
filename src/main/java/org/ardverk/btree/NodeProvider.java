@@ -2,7 +2,6 @@ package org.ardverk.btree;
 
 import java.util.Comparator;
 
-
 public interface NodeProvider<K, V> {
 
     public static enum Intent {
