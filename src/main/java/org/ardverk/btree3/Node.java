@@ -3,7 +3,6 @@ package org.ardverk.btree3;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.ardverk.btree3.NodeProvider.Intent;
 
@@ -11,15 +10,19 @@ class Node<K, V> {
     
     private static final int t = 2;
     
-    private final Id nodeId = new Id();
-    
     private final List<Entry<K, V>> entries 
         = new ArrayList<Entry<K, V>>(2*t-1);
     
-    private final List<Id> nodes 
-        = new ArrayList<Id>(2*t);
+    private final List<NodeId> nodes 
+        = new ArrayList<NodeId>(2*t);
     
-    public Id getId() {
+    private final NodeId nodeId;
+    
+    public Node(NodeId nodeId) {
+        this.nodeId = nodeId;
+    }
+    
+    public NodeId getId() {
         return nodeId;
     }
     
@@ -55,7 +58,7 @@ class Node<K, V> {
         return entries.remove(index);
     }
     
-    private Id removeNodeId(int index) {
+    private NodeId removeNodeId(int index) {
         return nodes.remove(index);
     }
     
@@ -73,14 +76,14 @@ class Node<K, V> {
         return getEntry(getEntryCount()-1);
     }
     
-    private Id firstNodeId(boolean remove) {
+    private NodeId firstNodeId(boolean remove) {
         if (remove) {
             return removeNodeId(0);
         }
         return getNodeId(0);
     }
     
-    private Id lastNodeId(boolean remove) {
+    private NodeId lastNodeId(boolean remove) {
         if (remove) {
             return removeNodeId(getNodeCount()-1);
         }
@@ -95,13 +98,13 @@ class Node<K, V> {
         return getNode(provider, getNodeCount()-1, intent);
     }
     
-    private Id getNodeId(int index) {
+    private NodeId getNodeId(int index) {
         return nodes.get(index);
     }
     
     private Node<K, V> getNode(NodeProvider<K, V> provider, 
             int index, Intent intent) {
-        Id nodeId = getNodeId(index);
+        NodeId nodeId = getNodeId(index);
         return provider.get(nodeId, intent);
     }
     
@@ -115,7 +118,7 @@ class Node<K, V> {
         return entries.set(index, entry);
     }
     
-    private Id set(int index, Id nodeId) {
+    private NodeId set(int index, NodeId nodeId) {
         return nodes.set(index, nodeId);
     }
     
@@ -128,19 +131,27 @@ class Node<K, V> {
         add(index, entry);
     }*/
     
-    public void add(Entry<K, V> entry) {
+    public void addLast(Entry<K, V> entry) {
         entries.add(entry);
+    }
+    
+    public void addFirst(Entry<K, V> entry) {
+        add(0, entry);
     }
     
     private void add(int index, Entry<K, V> entry) {
         entries.add(index, entry);
     }
     
-    public void add(Id nodeId) {
+    public void addLast(NodeId nodeId) {
         nodes.add(nodeId);
     }
     
-    private void add(int index, Id nodeId) {
+    public void addFirst(NodeId nodeId) {
+        add(0, nodeId);
+    }
+    
+    private void add(int index, NodeId nodeId) {
         nodes.add(index, nodeId);
     }
     
@@ -228,17 +239,28 @@ class Node<K, V> {
             if (!y.isUnderflow()) {
                 Entry<K, V> entry = y.largestEntry(provider, Intent.WRITE);
                 set(index, entry);
-                y.remove(provider, entry.getKey());System.out.println("A");
+                y.remove(provider, entry.getKey());
             } else {
                 Node<K, V> z = rightChild(provider, index, Intent.WRITE);
                 if (!z.isUnderflow()) {
                     Entry<K, V> entry = z.smallestEntry(provider, Intent.WRITE);
                     set(index, entry);
-                    z.remove(provider, entry.getKey());System.out.println("B");
+                    z.remove(provider, entry.getKey());
                 } else {
-                    // TODO: Not sure and delete Z!
-                    y.merge(provider, this, index, z);
-                    y.remove(provider, key);System.out.println("C");
+                    
+                    Entry<K, V> entry = removeEntry(index);
+                    removeNodeId(index+1);
+                    
+                    y.addLast(entry);
+                    y.entries.addAll(z.entries);
+                    
+                    if (!y.isLeaf()) {
+                        y.nodes.addAll(z.nodes);
+                    }
+                    
+                    provider.free(z);
+                    
+                    y.remove(provider, key);
                 }
             }
             
@@ -252,81 +274,61 @@ class Node<K, V> {
         Node<K, V> node = getNode(provider, index, Intent.WRITE);
         
         if (node.isUnderflow()) {
-            if (index == 0) {
-                Node<K, V> z = getNode(provider, index+1, Intent.WRITE);
-                if (!z.isUnderflow()) {
-                    
-                    Entry<K, V> k1 = getEntry(index);
-                    node.add(k1);
-                    set(index+1, z.firstEntry(true));
-                    node.add(z.firstNodeId(true));
-                    
-                } else if (index == getNodeCount()-1) {
-                    z = getNode(provider, index-1, Intent.WRITE);
-                    if (!z.isUnderflow()) {
-                        Entry<K, V> k1 = getEntry(index);
-                        node.add(0, k1);
-                        set(index-1, z.firstEntry(true));
-                        node.add(0, z.firstNodeId(true));
-                        
-                    } else {
-                        // MERGE
-                        node.merge(provider, this, index, z);
-                    }
-                } else {
-                    // MERGE
-                    node.merge(provider, this, index, z);
-                }
-            } else if (index == getNodeCount()-1) {
-                Node<K, V> z = getNode(provider, index-1, Intent.WRITE);
-                if (!z.isUnderflow()) {
-                    Entry<K, V> k1 = getEntry(index);
-                    node.add(0, k1);
-                    set(index-1, z.firstEntry(true));
-                    node.add(0, z.firstNodeId(true));
-                } else {
-                    // MERGE
-                    node.merge(provider, this, index, z);
-                }
-            } else {
-                // MERGE
+
+            Node<K, V> ls = null;
+            if (0 < index) {
+                ls = getNode(provider, index-1, Intent.WRITE);
             }
             
-            if (index == getNodeCount()-1) {
-                Node<K, V> left = getNode(provider, index-1, Intent.WRITE);
-                if (!left.isUnderflow()) {
-                    
-                } else {
-                    
+            if (ls != null && !ls.isUnderflow()) {
+                Entry<K, V> bla = ls.lastEntry(true);
+                Entry<K, V> foo = set(index-1, bla);
+                node.addFirst(foo);
+                
+                if (!node.isLeaf()) {
+                    node.addFirst(ls.lastNodeId(true));
                 }
             } else {
-                if (index == 0) {
-                    Node<K, V> right = getNode(provider, 1, Intent.WRITE);
-                    if (!right.isUnderflow()) {
-                        
+                
+                Node<K, V> rs = null;
+                if (index < getNodeCount()-1) {
+                    rs = getNode(provider, index+1, Intent.WRITE);
+                }
+                
+                if (rs != null && !rs.isUnderflow()) {
+                    Entry<K, V> bla = rs.firstEntry(true);
+                    Entry<K, V> foo = set(index, bla);
+                    node.addLast(foo);
+                    
+                    if (!node.isLeaf()) {
+                        node.addLast(rs.firstNodeId(true));
+                    }
+                
+                } else {
+                    
+                    if (ls != null && !ls.isEmpty()) {
+                        node.entries.addAll(0, ls.entries);
+                        if (!node.isLeaf()) {
+                            node.nodes.addAll(0, ls.nodes);
+                        }
+                        node.entries.add(t-1, removeEntry(index-1));
+                        removeNodeId(index-1);
+                        provider.free(ls);
                     } else {
+                        node.entries.addAll(rs.entries);
+                        if (!node.isLeaf()) {
+                            node.nodes.addAll(rs.nodes);
+                        }
                         
+                        node.entries.add(t-1, removeEntry(index));
+                        removeNodeId(index);
+                        provider.free(rs);
                     }
                 }
             }
         }
         
         node.remove(provider, key);
-    }
-    
-    private void merge(NodeProvider<K, V> provider, Node<K, V> parent, 
-            int index, Node<K, V> src) {
-        System.out.println(parent + " @ " + index);
-        
-        Entry<K, V> entry = parent.removeEntry(index-1);
-        parent.removeNodeId(index);
-        
-        entries.add(entry);
-        
-        entries.addAll(src.entries);
-        nodes.addAll(src.nodes);
-        
-        provider.free(src);
     }
     
     private Node<K, V> leftChild(NodeProvider<K, V> provider, int index, Intent intent) {
@@ -364,7 +366,7 @@ class Node<K, V> {
         
         Entry<K, V> median = removeEntry(m);
         
-        Id nodeId = null;
+        NodeId nodeId = null;
         if (!leaf) {
             nodeId = removeNodeId(m+1);
         }
@@ -372,10 +374,10 @@ class Node<K, V> {
         Node<K, V> dst = provider.allocate(nodeId);
         
         while (m < getEntryCount()) {
-            dst.add(removeEntry(m));
+            dst.addLast(removeEntry(m));
             
             if (!leaf) {
-                dst.add(removeNodeId(m+1));
+                dst.addLast(removeNodeId(m+1));
             }
         }
         
@@ -393,9 +395,9 @@ class Node<K, V> {
         
         private final Entry<K, V> entry;
         
-        private final Id nodeId;
+        private final NodeId nodeId;
         
-        private Median(Entry<K, V> entry, Id nodeId) {
+        private Median(Entry<K, V> entry, NodeId nodeId) {
             this.entry = entry;
             this.nodeId = nodeId;
         }
@@ -408,37 +410,8 @@ class Node<K, V> {
             return entry;
         }
 
-        public Id getNodeId() {
+        public NodeId getNodeId() {
             return nodeId;
-        }
-    }
-    
-    public static class Id {
-        
-        private static final AtomicInteger COUNTER = new AtomicInteger();
-        
-        private final int value = COUNTER.incrementAndGet();
-        
-        @Override
-        public int hashCode() {
-            return value;
-        }
-        
-        @Override
-        public boolean equals(Object o) {
-            if (o == this) {
-                return true;
-            } else if (!(o instanceof Id)) {
-                return false;
-            }
-            
-            Id other = (Id)o;
-            return value == other.value;
-        }
-        
-        @Override
-        public String toString() {
-            return Integer.toString(value);
         }
     }
 }

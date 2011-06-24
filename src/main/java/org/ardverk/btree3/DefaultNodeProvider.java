@@ -4,14 +4,13 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.ardverk.btree3.Node.Id;
 import org.ardverk.btree3.Node.Median;
 
 
 public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
 
-    public final Map<Id, Node<K, V>> nodes 
-        = new LinkedHashMap<Id, Node<K, V>>();
+    public final Map<NodeId, Node<K, V>> nodes 
+        = new LinkedHashMap<NodeId, Node<K, V>>();
     
     private final Comparator<? super K> comparator;
     
@@ -27,17 +26,17 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     }
 
     @Override
-    public Node<K, V> get(Id pageId, Intent intent) {
+    public Node<K, V> get(NodeId pageId, Intent intent) {
         Node<K, V> node = nodes.get(pageId);
         return node;
     }
     
     @Override
-    public Node<K, V> allocate(Id init) {
-        Node<K, V> node = new Node<K, V>();
+    public Node<K, V> allocate(NodeId init) {
+        Node<K, V> node = new Node<K, V>(new NodeId());
         
         if (init != null) {
-            node.add(init);
+            node.addLast(init);
         }
         
         nodes.put(node.getId(), node);
@@ -126,10 +125,55 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("ROOT: " + t.root);
         System.out.println("NODES: " + t.nodes);
         
-        /*System.out.println();
+        System.out.println();
+        t.remove("6");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("4");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("5");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("3");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("2");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("9");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
         t.remove("7");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);*/
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("1");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("0");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
+        
+        System.out.println();
+        t.remove("BLA");
+        System.out.println("ROOT: " + t.root);
+        System.out.println("NODES: " + t.nodes);
         
         /*t.put("4", "4");
         System.out.println("ROOT: " + t.root);

@@ -2,7 +2,6 @@ package org.ardverk.btree3;
 
 import java.util.Comparator;
 
-import org.ardverk.btree3.Node.Id;
 
 public interface NodeProvider<K, V> {
 
@@ -11,11 +10,11 @@ public interface NodeProvider<K, V> {
         WRITE;
     }
     
-    public Node<K, V> allocate(Id init);
+    public Node<K, V> allocate(NodeId init);
     
     public void free(Node<? extends K, ? extends V> node);
     
-    public Node<K, V> get(Node.Id nodeId, Intent intent);
+    public Node<K, V> get(NodeId nodeId, Intent intent);
     
     public Comparator<? super K> comparator();
 }
