@@ -8,20 +8,22 @@ public class Node<K, V> {
     
     private final NodeId nodeId;
     
+    private final int t;
+    
     private final Bucket<Entry<K, V>> entries;
     
     private final Bucket<NodeId> nodes;
     
-    public Node(NodeId nodeId, int t, NodeId init) {
+    public Node(boolean leaf, NodeId nodeId, int t) {
         this.nodeId = nodeId;
+        this.t = t;
         
-        entries = new Bucket<Entry<K, V>>(t, 2*t-1);
+        entries = new Bucket<Entry<K, V>>(2*t-1);
         
         Bucket<NodeId> nodes = null;
         
-        if (init != null) {
-            nodes = new Bucket<NodeId>(-1, 2*t);
-            nodes.add(init);
+        if (!leaf) {
+            nodes = new Bucket<NodeId>(2*t);
         }
         
         this.nodes = nodes;
@@ -40,7 +42,7 @@ public class Node<K, V> {
     }
     
     public boolean isEmpty() {
-        return getEntryCount() == 0;
+        return entries.isEmpty();
     }
     
     public boolean isOverflow() {
@@ -48,11 +50,10 @@ public class Node<K, V> {
     }
     
     public boolean isUnderflow() {
-        return entries.isUnderflow();
+        return entries.size() < t;
     }
     
     public boolean isLeaf() {
-        //return nodes.isEmpty();
         return nodes == null;
     }
     
@@ -160,6 +161,20 @@ public class Node<K, V> {
     private int binarySearch(NodeProvider<K, V> provider, K key) {
         Comparator<? super K> comparator = provider.comparator();
         return EntryUtils.binarySearch(entries, key, comparator);
+    }
+    
+    public Entry<K, V> ceilingEntry(NodeProvider<K, V> provider, K key) {
+        int index = binarySearch(provider, key);
+        
+        if (index >= 0 || isLeaf()) {
+            if (index < 0) {
+                index = -index - 1;
+            }
+            
+            return getEntry(index);
+        }
+        
+        return getEntry(provider, key, -index - 1, Intent.READ);
     }
     
     public Entry<K, V> get(NodeProvider<K, V> provider, K key) {
@@ -372,14 +387,14 @@ public class Node<K, V> {
         int entryCount = getEntryCount();
         int m = entryCount/2;
         
+        Node<K, V> dst = provider.allocate(leaf);
+        
         Entry<K, V> median = removeEntry(m);
         
-        NodeId nodeId = null;
         if (!leaf) {
-            nodeId = removeNodeId(m+1);
+            NodeId nodeId = removeNodeId(m+1);
+            dst.addLast(nodeId);
         }
-        
-        Node<K, V> dst = provider.allocate(nodeId);
         
         while (m < getEntryCount()) {
             dst.addLast(removeEntry(m));
@@ -392,10 +407,30 @@ public class Node<K, V> {
         return new Median<K, V>(median, dst.getNodeId());
     }
     
+    public Node<K, V> copy(NodeProvider<K, V> provider) {
+        boolean leaf = isLeaf();
+        Node<K, V> dst = provider.allocate(leaf);
+        
+        dst.entries.addAll(entries);
+        
+        if (!leaf) {
+            dst.nodes.addAll(nodes);
+        }
+        
+        return dst;
+    }
+    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(entries).append(nodes);
+        sb.append(entries);
+        
+        if (nodes != null) {
+            sb.append(nodes);
+        } else {
+            sb.append("[]");
+        }
+        
         return sb.toString();
     }
     
@@ -420,6 +455,11 @@ public class Node<K, V> {
 
         public NodeId getNodeId() {
             return nodeId;
+        }
+        
+        @Override
+        public String toString() {
+            return "<" + entry + ", " + nodeId + ">";
         }
     }
 }

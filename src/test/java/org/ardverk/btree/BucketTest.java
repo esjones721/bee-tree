@@ -1,20 +1,19 @@
 package org.ardverk.btree;
 
-import org.ardverk.btree.Bucket;
 import org.junit.Test;
 
 public class BucketTest {
 
     @Test
     public void main() {
-        Bucket<String> a = new Bucket<String>(0, 6);
+        Bucket<String> a = new Bucket<String>(6);
         a.add("a");
         a.add("b");
         a.add("c");
         
         System.out.println(a);
         
-        Bucket<String> b = new Bucket<String>(0, 3);
+        Bucket<String> b = new Bucket<String>(3);
         b.add("1");
         b.add("2");
         b.add("3");

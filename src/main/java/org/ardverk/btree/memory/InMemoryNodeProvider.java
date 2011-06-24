@@ -29,9 +29,9 @@ public class InMemoryNodeProvider<K, V> extends AbstractNodeProvider<K, V> {
     }
     
     @Override
-    public Node<K, V> allocate(NodeId init) {
+    public Node<K, V> allocate(boolean leaf) {
         NodeId nodeId = new InMemoryNodeId();
-        Node<K, V> node = new Node<K, V>(nodeId, t, init);
+        Node<K, V> node = new Node<K, V>(leaf, nodeId, t);
         
         nodes.put(node.getNodeId(), node);
         return node;

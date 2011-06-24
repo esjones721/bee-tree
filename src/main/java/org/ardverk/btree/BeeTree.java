@@ -1,6 +1,7 @@
 package org.ardverk.btree;
 
 import java.util.Arrays;
+import java.util.Map;
 
 import org.ardverk.btree.Node.Median;
 import org.ardverk.btree.NodeProvider.Intent;
@@ -10,7 +11,7 @@ public class BeeTree<K, V> {
 
     private final NodeProvider<K, V> provider;
     
-    private Node<K, V> root;
+    private volatile Node<K, V> root;
     
     public BeeTree() {
         this(new InMemoryNodeProvider<K, V>());
@@ -19,20 +20,38 @@ public class BeeTree<K, V> {
     public BeeTree(NodeProvider<K, V> provider) {
         this.provider = provider;
         
-        root = provider.allocate(null);
+        root = provider.allocate(true);
     }
     
     public void put(K key, V value) {
-        if (root.isOverflow()) {
-            Median<K, V> median = root.split(provider);
+        synchronized (provider) {
+            if (root.isOverflow()) {
+                Median<K, V> median = root.split(provider);
+                
+                Node<K, V> tmp = provider.allocate(false);
+                
+                tmp.addFirst(root.getNodeId());
+                tmp.add(median);
+                
+                root = tmp;
+            }
             
-            Node<K, V> tmp = provider.allocate(root.getNodeId());
-            tmp.add(median);
-            
-            root = tmp;
+            root.put(provider, key, value);
         }
-        
-        root.put(provider, key, value);
+    }
+    
+    public V remove(K key) {
+        synchronized (provider) {
+            Entry<K, V> entry = root.remove(provider, key);
+            
+            if (!root.isLeaf() && root.isEmpty()) {
+                Node<K, V> tmp = root.firstNode(provider, Intent.READ);
+                provider.free(root);
+                root = tmp;
+            }
+            
+            return entry != null ? entry.getValue() : null;
+        }
     }
     
     public V get(K key) {
@@ -40,61 +59,20 @@ public class BeeTree<K, V> {
         return entry != null ? entry.getValue() : null;
     }
     
-    public V remove(K key) {
-        Entry<K, V> entry = root.remove(provider, key);
-        
-        if (!root.isLeaf() && root.isEmpty()) {
-            Node<K, V> tmp = root.firstNode(provider, Intent.READ);
-            provider.free(root);
-            root = tmp;
+    public Map.Entry<K, V> ceilingEntry(K key) {
+        return root.ceilingEntry(provider, key);
+    }
+    
+    public void clear() {
+        synchronized (provider) {
+            Node<K, V> tmp = root;
+            root = provider.allocate(true);
+            
+            provider.free(tmp);
         }
-        
-        System.out.println("REMOVED: " + key + " -> " + entry);
-        return entry != null ? entry.getValue() : null;
     }
     
     public static void main(String[] args) {
-        
-        String[] a = { "a", "b", "c", "d", "e", null, null, null };
-        System.out.println(Arrays.toString(a));
-        
-        int index = 2;
-        int size = 5;
-        
-        // REMOVE
-        System.arraycopy(a, index+1, a, index, size-index);
-        --size;
-        System.out.println(Arrays.toString(a) + ", " + size);
-        
-        // ADD
-        index = 3;
-        System.arraycopy(a, index, a, index+1, size-index);
-        ++size;
-        a[index] = "X";
-        System.out.println(Arrays.toString(a) + ", " + size);
-        
-        // ADD
-        index = 3;
-        System.arraycopy(a, index, a, index+1, size-index);
-        ++size;
-        a[index] = "X";
-        System.out.println(Arrays.toString(a) + ", " + size);
-        
-        // ADD
-        index = 3;
-        System.arraycopy(a, index, a, index+1, size-index);
-        ++size;
-        a[index] = "X";
-        System.out.println(Arrays.toString(a) + ", " + size);
-        
-        // ADD
-        index = 3;
-        System.arraycopy(a, index, a, index+1, size-index);
-        ++size;
-        a[index] = "X";
-        System.out.println(Arrays.toString(a) + ", " + size);
-        
-        //System.exit(0);
         
         BeeTree<String, String> t = new BeeTree<String, String>();
         
@@ -107,6 +85,9 @@ public class BeeTree<K, V> {
         t.put("7", "7");
         System.out.println("ROOT: " + t.root);
         System.out.println("NODES: " + t.provider);
+        
+        System.out.println("C: " + t.ceilingEntry("6"));
+        System.exit(0);
         
         t.put("1", "1");
         System.out.println("ROOT: " + t.root);

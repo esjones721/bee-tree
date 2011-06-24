@@ -12,12 +12,9 @@ class Bucket<E> implements List<E>, RandomAccess {
 
     protected final Object[] elements;
     
-    protected final int minSize;
-    
     protected int size = 0;
     
-    public Bucket(int minSize, int maxSize) {
-        this.minSize = minSize;
+    public Bucket(int maxSize) {
         this.elements = new Object[maxSize];
     }
     
@@ -37,10 +34,6 @@ class Bucket<E> implements List<E>, RandomAccess {
     
     public boolean isOverflow() {
         return size >= elements.length;
-    }
-    
-    public boolean isUnderflow() {
-        return size < minSize;
     }
     
     public void addFirst(E element) {
