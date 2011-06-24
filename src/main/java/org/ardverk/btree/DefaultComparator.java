@@ -1,4 +1,4 @@
-package org.ardverk.btree3;
+package org.ardverk.btree;
 
 import java.util.Comparator;
 

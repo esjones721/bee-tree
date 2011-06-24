@@ -1,8 +1,8 @@
-package org.ardverk.btree3;
+package org.ardverk.btree;
 
 import java.util.Comparator;
 
-import org.ardverk.btree3.NodeProvider.Intent;
+import org.ardverk.btree.NodeProvider.Intent;
 
 class Node<K, V> {
     

@@ -1,5 +1,6 @@
-package org.ardverk.btree3;
+package org.ardverk.btree;
 
+import org.ardverk.btree.Bucket;
 import org.junit.Test;
 
 public class BucketTest {
