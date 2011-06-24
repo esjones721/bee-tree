@@ -1,7 +1,6 @@
 package org.ardverk.btree3;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,12 +18,6 @@ class Node<K, V> {
     
     private final List<Id> nodes 
         = new ArrayList<Id>(2*t);
-    
-    public Node(Id init) {
-        if (init != null) {
-            nodes.add(init);
-        }
-    }
     
     public Id getId() {
         return nodeId;
@@ -118,10 +111,6 @@ class Node<K, V> {
         return node.get(provider, key);
     }
     
-    private Entry<K, V> set(int index, K key, V value) {
-        return set(index, new Entry<K, V>(key, value));
-    }
-    
     private Entry<K, V> set(int index, Entry<K, V> entry) {
         return entries.set(index, entry);
     }
@@ -187,19 +176,22 @@ class Node<K, V> {
     public Entry<K, V> put(NodeProvider<K, V> provider, K key, V value) {
         int index = binarySearch(provider, key);
         
+        // Replace an existing Key-Value
         if (index >= 0) {
-            return set(index, key, value);
+            return set(index, new Entry<K, V>(key, value));
         }
         
         assert (index < 0);
         index = -index - 1;
         
+        // Found a leaf where it should be stored!
         if (isLeaf()) {
             assert (!isOverflow());
             add(index, new Entry<K, V>(key, value));
             return null;
         }
         
+        // Keep looking!
         Node<K, V> node = getNode(provider, index, Intent.WRITE);
         
         if (node.isOverflow()) {
@@ -221,145 +213,143 @@ class Node<K, V> {
         
         int index = binarySearch(provider, key);
         
+        // It must be here if it's a leaf!
         if (isLeaf()) {
+            Entry<K, V> entry = null;
             if (index >= 0) {
-                removeEntry(index);
+                entry = removeEntry(index);
             }
-        } else {
-            
-            if (index >= 0) {
-                Node<K, V> y = leftChild(provider, index);
-                if (!y.isUnderflow()) {
-                    Entry<K, V> entry = y.largestEntry(provider);
-                    set(index, entry);
-                    y.remove(provider, entry.getKey());System.out.println("A");
-                } else {
-                    Node<K, V> z = rightChild(provider, index);
-                    if (!z.isUnderflow()) {
-                        Entry<K, V> entry = z.smallestEntry(provider);
-                        set(index, entry);
-                        z.remove(provider, entry.getKey());System.out.println("B");
-                    } else {
-                        // TODO: Not sure and delete Z!
-                        y.merge(this, index, z);
-                        y.remove(provider, key);System.out.println("C");
-                    }
-                }
+            return;
+        }
+        
+        // Found the Key-Value in an internal Node!
+        if (index >= 0) {
+            Node<K, V> y = leftChild(provider, index, Intent.WRITE);
+            if (!y.isUnderflow()) {
+                Entry<K, V> entry = y.largestEntry(provider, Intent.WRITE);
+                set(index, entry);
+                y.remove(provider, entry.getKey());System.out.println("A");
             } else {
-                assert (index < 0);
-                index = -index - 1;
-                
-                Node<K, V> node = getNode(provider, index, Intent.WRITE);
-                
-                if (node.isUnderflow()) {
-                    if (index == 0) {
-                        Node<K, V> z = getNode(provider, index+1, Intent.WRITE);
-                        if (!z.isUnderflow()) {
-                            
-                            System.out.println("THIZ: " + this);
-                            System.out.println("NODE: " + node);
-                            System.out.println("index: " + index);
-                            
-                            Entry<K, V> k1 = getEntry(index);
-                            node.add(k1);
-                            set(index+1, z.firstEntry(true));
-                            node.add(z.firstNodeId(true));
-                            
-                        } else if (index == getNodeCount()-1) {
-                            z = getNode(provider, index-1, Intent.WRITE);
-                            if (!z.isUnderflow()) {
-                                Entry<K, V> k1 = getEntry(index);
-                                node.add(0, k1);
-                                set(index-1, z.firstEntry(true));
-                                node.add(0, z.firstNodeId(true));
-                                
-                            } else {
-                                // MERGE
-                                node.merge(this, index, z);
-                                Collections.reverse(node.entries);
-                                Collections.reverse(node.nodes);
-                            }
-                        } else {
-                            // MERGE
-                            node.merge(this, index, z);
-                        }
-                    } else if (index == getNodeCount()-1) {
-                        Node<K, V> z = getNode(provider, index-1, Intent.WRITE);
-                        if (!z.isUnderflow()) {
-                            Entry<K, V> k1 = getEntry(index);
-                            node.add(0, k1);
-                            set(index-1, z.firstEntry(true));
-                            node.add(0, z.firstNodeId(true));
-                        } else {
-                            // MERGE
-                            node.merge(this, index, z);
-                            Collections.reverse(node.entries);
-                            Collections.reverse(node.nodes);
-                        }
+                Node<K, V> z = rightChild(provider, index, Intent.WRITE);
+                if (!z.isUnderflow()) {
+                    Entry<K, V> entry = z.smallestEntry(provider, Intent.WRITE);
+                    set(index, entry);
+                    z.remove(provider, entry.getKey());System.out.println("B");
+                } else {
+                    // TODO: Not sure and delete Z!
+                    y.merge(provider, this, index, z);
+                    y.remove(provider, key);System.out.println("C");
+                }
+            }
+            
+            return;
+        } 
+        
+        // Keep looking
+        assert (index < 0);
+        index = -index - 1;
+        
+        Node<K, V> node = getNode(provider, index, Intent.WRITE);
+        
+        if (node.isUnderflow()) {
+            if (index == 0) {
+                Node<K, V> z = getNode(provider, index+1, Intent.WRITE);
+                if (!z.isUnderflow()) {
+                    
+                    Entry<K, V> k1 = getEntry(index);
+                    node.add(k1);
+                    set(index+1, z.firstEntry(true));
+                    node.add(z.firstNodeId(true));
+                    
+                } else if (index == getNodeCount()-1) {
+                    z = getNode(provider, index-1, Intent.WRITE);
+                    if (!z.isUnderflow()) {
+                        Entry<K, V> k1 = getEntry(index);
+                        node.add(0, k1);
+                        set(index-1, z.firstEntry(true));
+                        node.add(0, z.firstNodeId(true));
+                        
                     } else {
                         // MERGE
+                        node.merge(provider, this, index, z);
                     }
+                } else {
+                    // MERGE
+                    node.merge(provider, this, index, z);
+                }
+            } else if (index == getNodeCount()-1) {
+                Node<K, V> z = getNode(provider, index-1, Intent.WRITE);
+                if (!z.isUnderflow()) {
+                    Entry<K, V> k1 = getEntry(index);
+                    node.add(0, k1);
+                    set(index-1, z.firstEntry(true));
+                    node.add(0, z.firstNodeId(true));
+                } else {
+                    // MERGE
+                    node.merge(provider, this, index, z);
+                }
+            } else {
+                // MERGE
+            }
+            
+            if (index == getNodeCount()-1) {
+                Node<K, V> left = getNode(provider, index-1, Intent.WRITE);
+                if (!left.isUnderflow()) {
                     
-                    if (index == getNodeCount()-1) {
-                        Node<K, V> left = getNode(provider, index-1, Intent.WRITE);
-                        if (!left.isUnderflow()) {
-                            
-                        } else {
-                            
-                        }
+                } else {
+                    
+                }
+            } else {
+                if (index == 0) {
+                    Node<K, V> right = getNode(provider, 1, Intent.WRITE);
+                    if (!right.isUnderflow()) {
+                        
                     } else {
-                        if (index == 0) {
-                            Node<K, V> right = getNode(provider, 1, Intent.WRITE);
-                            if (!right.isUnderflow()) {
-                                
-                            } else {
-                                
-                            }
-                        }
+                        
                     }
                 }
-                
-                node.remove(provider, key);
             }
         }
+        
+        node.remove(provider, key);
     }
     
-    private void merge(Node<K, V> parent, int index, Node<K, V> src) {
+    private void merge(NodeProvider<K, V> provider, Node<K, V> parent, 
+            int index, Node<K, V> src) {
         System.out.println(parent + " @ " + index);
         
         Entry<K, V> entry = parent.removeEntry(index-1);
-        //Id nodeId = parent.removeNode(index);
+        parent.removeNodeId(index);
         
         entries.add(entry);
-        //src.add(nodeId);
         
         entries.addAll(src.entries);
         nodes.addAll(src.nodes);
         
-        System.out.println("MERGED: " + this);
+        provider.free(src);
     }
     
-    private Node<K, V> leftChild(NodeProvider<K, V> provider, int index) {
-        return getNode(provider, index, Intent.WRITE);
+    private Node<K, V> leftChild(NodeProvider<K, V> provider, int index, Intent intent) {
+        return getNode(provider, index, intent);
     }
     
-    private Node<K, V> rightChild(NodeProvider<K, V> provider, int index) {
-        return getNode(provider, index+1, Intent.WRITE);
+    private Node<K, V> rightChild(NodeProvider<K, V> provider, int index, Intent intent) {
+        return getNode(provider, index+1, intent);
     }
     
-    private Entry<K, V> smallestEntry(NodeProvider<K, V> provider) {
+    private Entry<K, V> smallestEntry(NodeProvider<K, V> provider, Intent intent) {
         Node<K, V> node = this;
         while (!node.isLeaf()) {
-            node = node.firstNode(provider, Intent.WRITE);
+            node = node.firstNode(provider, intent);
         }
         
         return node.firstEntry(false);
     }
     
-    private Entry<K, V> largestEntry(NodeProvider<K, V> provider) {
+    private Entry<K, V> largestEntry(NodeProvider<K, V> provider, Intent intent) {
         Node<K, V> node = this;
         while (!node.isLeaf()) {
-            node = node.lastNode(provider, Intent.WRITE);
+            node = node.lastNode(provider, intent);
         }
         
         return node.lastEntry(false);

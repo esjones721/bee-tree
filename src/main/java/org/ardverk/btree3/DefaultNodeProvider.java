@@ -34,13 +34,19 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     
     @Override
     public Node<K, V> allocate(Id init) {
-        Node<K, V> node = new Node<K, V>(init);
+        Node<K, V> node = new Node<K, V>();
+        
+        if (init != null) {
+            node.add(init);
+        }
+        
         nodes.put(node.getId(), node);
         return node;
     }
 
     @Override
     public void free(Node<? extends K, ? extends V> node) {
+        System.out.println("FREE: " + node.getId() + " - " + node);
         nodes.remove(node.getId());
     }
 
@@ -120,10 +126,10 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("ROOT: " + t.root);
         System.out.println("NODES: " + t.nodes);
         
-        System.out.println();
+        /*System.out.println();
         t.remove("7");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.nodes);*/
         
         /*t.put("4", "4");
         System.out.println("ROOT: " + t.root);
