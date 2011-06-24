@@ -1,6 +1,5 @@
 package org.ardverk.btree3;
 
-import java.io.ObjectInputStream.GetField;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -43,11 +42,11 @@ class Node<K, V> {
         return getEntryCount() == 0;
     }
     
-    public boolean isFull() {
+    public boolean isOverflow() {
         return getEntryCount() >= 2*t-1;
     }
     
-    private boolean isUnderflow() {
+    public boolean isUnderflow() {
         return getEntryCount() < t;
     }
     
@@ -95,7 +94,7 @@ class Node<K, V> {
         return getNodeId(getNodeCount()-1);
     }
     
-    private Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
+    Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
         return getNode(provider, 0, intent);
     }
     
@@ -131,10 +130,6 @@ class Node<K, V> {
         return nodes.set(index, nodeId);
     }
     
-    public void add(Entry<K, V> entry) {
-        add(getEntryCount(), entry);
-    }
-    
     /*private void add(NodeProvider<K, V> provider, Entry<K, V> entry) {
         int index = binarySearch(provider, entry.getKey());
         if (index < 0) {
@@ -144,8 +139,8 @@ class Node<K, V> {
         add(index, entry);
     }*/
     
-    private void add(int index, K key, V value) {
-        add(index, new Entry<K, V>(key, value));
+    public void add(Entry<K, V> entry) {
+        entries.add(entry);
     }
     
     private void add(int index, Entry<K, V> entry) {
@@ -158,6 +153,15 @@ class Node<K, V> {
     
     private void add(int index, Id nodeId) {
         nodes.add(index, nodeId);
+    }
+    
+    public void add(Median<K, V> median) {
+        add(getEntryCount(), median);
+    }
+    
+    private void add(int index, Median<K, V> median) {
+        add(index, median.getEntry());
+        add(index+1, median.getNodeId());
     }
     
     private int binarySearch(NodeProvider<K, V> provider, K key) {
@@ -173,7 +177,7 @@ class Node<K, V> {
             return getEntry(index);
         }
         
-        // Didn't find it but know where to look for it!
+        // I didn't find it but I know where to look for it!
         if (!isLeaf()) {
             return getEntry(provider, key, -index - 1, Intent.READ);
         }
@@ -191,19 +195,17 @@ class Node<K, V> {
         index = -index - 1;
         
         if (isLeaf()) {
-            assert (!isFull());
-            add(index, key, value);
+            assert (!isOverflow());
+            add(index, new Entry<K, V>(key, value));
             return null;
         }
         
         Node<K, V> node = getNode(provider, index, Intent.WRITE);
         
-        if (node.isFull()) {
+        if (node.isOverflow()) {
             
             Median<K, V> median = node.split(provider);
-            
-            add(index, median.getEntry());
-            add(index+1, median.getNodeId());
+            add(index, median);
             
             Comparator<? super K> comparator = provider.comparator();
             int cmp = comparator.compare(key, median.getKey());
@@ -335,7 +337,6 @@ class Node<K, V> {
         nodes.addAll(src.nodes);
         
         System.out.println("MERGED: " + this);
-        Thread.dumpStack();
     }
     
     private Node<K, V> leftChild(NodeProvider<K, V> provider, int index) {
@@ -346,15 +347,6 @@ class Node<K, V> {
         return getNode(provider, index+1, Intent.WRITE);
     }
     
-    private Entry<K, V> largestEntry(NodeProvider<K, V> provider) {
-        Node<K, V> node = this;
-        while (!node.isLeaf()) {
-            node = node.lastNode(provider, Intent.WRITE);
-        }
-        
-        return node.lastEntry(false);
-    }
-    
     private Entry<K, V> smallestEntry(NodeProvider<K, V> provider) {
         Node<K, V> node = this;
         while (!node.isLeaf()) {
@@ -362,6 +354,15 @@ class Node<K, V> {
         }
         
         return node.firstEntry(false);
+    }
+    
+    private Entry<K, V> largestEntry(NodeProvider<K, V> provider) {
+        Node<K, V> node = this;
+        while (!node.isLeaf()) {
+            node = node.lastNode(provider, Intent.WRITE);
+        }
+        
+        return node.lastEntry(false);
     }
     
     public Median<K, V> split(NodeProvider<K, V> provider) {
@@ -380,8 +381,6 @@ class Node<K, V> {
         
         Node<K, V> dst = provider.allocate(nodeId);
         
-        //System.out.println("BEFORE: " + this);
-        
         while (m < getEntryCount()) {
             dst.add(removeEntry(m));
             
@@ -389,10 +388,6 @@ class Node<K, V> {
                 dst.add(removeNodeId(m+1));
             }
         }
-        
-        //System.out.println("AFTER.l" + this);
-        //System.out.println("AFTER.r" + dst);
-        //System.out.println("AFTER.m" + median);
         
         return new Median<K, V>(median, dst.getId());
     }
@@ -410,7 +405,7 @@ class Node<K, V> {
         
         private final Id nodeId;
         
-        public Median(Entry<K, V> entry, Id nodeId) {
+        private Median(Entry<K, V> entry, Id nodeId) {
             this.entry = entry;
             this.nodeId = nodeId;
         }

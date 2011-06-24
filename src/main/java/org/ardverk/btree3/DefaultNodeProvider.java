@@ -50,13 +50,11 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     }
     
     public void put(K key, V value) {
-        if (root.isFull()) {
+        if (root.isOverflow()) {
             Median<K, V> median = root.split(this);
             
             Node<K, V> tmp = allocate(root.getId());
-            
-            tmp.add(median.getEntry());
-            tmp.add(median.getNodeId());
+            tmp.add(median);
             
             root = tmp;
         }
@@ -71,6 +69,12 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
     
     public void remove(K key) {
         root.remove(this, key);
+        
+        if (!root.isLeaf() && root.isEmpty()) {
+            Node<K, V> tmp = root.firstNode(this, Intent.READ);
+            free(root);
+            root = tmp;
+        }
     }
     
     public static void main(String[] args) {
