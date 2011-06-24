@@ -1,5 +1,6 @@
 package org.ardverk.btree3;
 
+import java.util.Arrays;
 import java.util.Comparator;
 
 import org.ardverk.btree3.Node.Median;
@@ -53,6 +54,48 @@ public class BeeTree<K, V> {
     }
     
     public static void main(String[] args) {
+        
+        String[] a = { "a", "b", "c", "d", "e", null, null, null };
+        System.out.println(Arrays.toString(a));
+        
+        int index = 2;
+        int size = 5;
+        
+        // REMOVE
+        System.arraycopy(a, index+1, a, index, size-index);
+        --size;
+        System.out.println(Arrays.toString(a) + ", " + size);
+        
+        // ADD
+        index = 3;
+        System.arraycopy(a, index, a, index+1, size-index);
+        ++size;
+        a[index] = "X";
+        System.out.println(Arrays.toString(a) + ", " + size);
+        
+        // ADD
+        index = 3;
+        System.arraycopy(a, index, a, index+1, size-index);
+        ++size;
+        a[index] = "X";
+        System.out.println(Arrays.toString(a) + ", " + size);
+        
+        // ADD
+        index = 3;
+        System.arraycopy(a, index, a, index+1, size-index);
+        ++size;
+        a[index] = "X";
+        System.out.println(Arrays.toString(a) + ", " + size);
+        
+        // ADD
+        index = 3;
+        System.arraycopy(a, index, a, index+1, size-index);
+        ++size;
+        a[index] = "X";
+        System.out.println(Arrays.toString(a) + ", " + size);
+        
+        //System.exit(0);
+        
         BeeTree<String, String> t = new BeeTree<String, String>();
         
         t.put("3", "3");

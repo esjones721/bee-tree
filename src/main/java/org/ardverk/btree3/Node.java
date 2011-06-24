@@ -1,8 +1,6 @@
 package org.ardverk.btree3;
 
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 
 import org.ardverk.btree3.NodeProvider.Intent;
 
@@ -10,11 +8,11 @@ class Node<K, V> {
     
     private static final int t = 2;
     
-    private final List<Entry<K, V>> entries 
-        = new ArrayList<Entry<K, V>>(2*t-1);
+    private final Bucket<Entry<K, V>> entries 
+        = new Bucket<Entry<K, V>>(2*t-1);
     
-    private final List<NodeId> nodes 
-        = new ArrayList<NodeId>(2*t);
+    private final Bucket<NodeId> nodes 
+        = new Bucket<NodeId>(2*t);
     
     private final NodeId nodeId;
     
@@ -64,30 +62,30 @@ class Node<K, V> {
     
     private Entry<K, V> firstEntry(boolean remove) {
         if (remove) {
-            return removeEntry(0);
+            return entries.removeFirst();
         }
-        return getEntry(0);
+        return entries.getFirst();
     }
     
     private Entry<K, V> lastEntry(boolean remove) {
         if (remove) {
-            return removeEntry(getEntryCount()-1);
+            return entries.removeLast();
         }
-        return getEntry(getEntryCount()-1);
+        return entries.getLast();
     }
     
     private NodeId firstNodeId(boolean remove) {
         if (remove) {
-            return removeNodeId(0);
+            return nodes.removeFirst();
         }
-        return getNodeId(0);
+        return nodes.getFirst();
     }
     
     private NodeId lastNodeId(boolean remove) {
         if (remove) {
-            return removeNodeId(getNodeCount()-1);
+            return nodes.removeLast();
         }
-        return getNodeId(getNodeCount()-1);
+        return nodes.getLast();
     }
     
     Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
@@ -119,11 +117,11 @@ class Node<K, V> {
     }
     
     public void addLast(Entry<K, V> entry) {
-        entries.add(entry);
+        entries.addLast(entry);
     }
     
     public void addFirst(Entry<K, V> entry) {
-        entries.add(0, entry);
+        entries.addFirst(entry);
     }
     
     private void add(int index, Entry<K, V> entry) {
@@ -131,11 +129,11 @@ class Node<K, V> {
     }
     
     public void addLast(NodeId nodeId) {
-        nodes.add(nodeId);
+        nodes.addLast(nodeId);
     }
     
     public void addFirst(NodeId nodeId) {
-        nodes.add(0, nodeId);
+        nodes.addFirst(nodeId);
     }
     
     private void add(int index, NodeId nodeId) {
@@ -326,7 +324,7 @@ class Node<K, V> {
     }
     
     private void mergeWithRight(Entry<K, V> median, Node<K, V> right) {
-        entries.add(median);
+        entries.addLast(median);
         entries.addAll(right.entries);
         if (!isLeaf()) {
             nodes.addAll(right.nodes);
@@ -334,7 +332,7 @@ class Node<K, V> {
     }
     
     private void mergeWithLeft(Entry<K, V> median, Node<K, V> left) {
-        entries.add(0, median);
+        entries.addFirst(median);
         entries.addAll(0, left.entries);
         if (!isLeaf()) {
             nodes.addAll(0, left.nodes);
