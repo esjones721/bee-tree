@@ -1,179 +1,148 @@
 package org.ardverk.btree3;
 
 import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import org.ardverk.btree3.Node.Median;
+import org.ardverk.btree3.NodeProvider.Intent;
 
+public class BeeTree<K, V> {
 
-public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
-
-    public final Map<NodeId, Node<K, V>> nodes 
-        = new LinkedHashMap<NodeId, Node<K, V>>();
+    private final NodeProvider<K, V> provider;
     
-    private final Comparator<? super K> comparator;
+    private Node<K, V> root;
     
-    public volatile Node<K, V> root;
-    
-    public DefaultNodeProvider() {
+    public BeeTree() {
         this(DefaultComparator.create());
     }
     
-    public DefaultNodeProvider(Comparator<? super K> comparator) {
-        this.comparator = comparator;
-        root = allocate(null);
-    }
-
-    @Override
-    public Node<K, V> get(NodeId pageId, Intent intent) {
-        Node<K, V> node = nodes.get(pageId);
-        return node;
-    }
-    
-    @Override
-    public Node<K, V> allocate(NodeId init) {
-        Node<K, V> node = new Node<K, V>(new NodeId());
+    public BeeTree(Comparator<? super K> c) {
+        provider = new InMemoryNodeProvider<K, V>(c);
         
-        if (init != null) {
-            node.addLast(init);
-        }
-        
-        nodes.put(node.getId(), node);
-        return node;
-    }
-
-    @Override
-    public void free(Node<? extends K, ? extends V> node) {
-        System.out.println("FREE: " + node.getId() + " - " + node);
-        nodes.remove(node.getId());
-    }
-
-    @Override
-    public Comparator<? super K> comparator() {
-        return comparator;
+        root = provider.allocate(null);
     }
     
     public void put(K key, V value) {
         if (root.isOverflow()) {
-            Median<K, V> median = root.split(this);
+            Median<K, V> median = root.split(provider);
             
-            Node<K, V> tmp = allocate(root.getId());
+            Node<K, V> tmp = provider.allocate(root.getNodeId());
             tmp.add(median);
             
             root = tmp;
         }
         
-        root.put(this, key, value);
+        root.put(provider, key, value);
     }
     
     public V get(K key) {
-        Entry<K, V> entry = root.get(this, key);
+        Entry<K, V> entry = root.get(provider, key);
         return entry != null ? entry.getValue() : null;
     }
     
-    public void remove(K key) {
-        root.remove(this, key);
+    public V remove(K key) {
+        Entry<K, V> entry = root.remove(provider, key);
         
         if (!root.isLeaf() && root.isEmpty()) {
-            Node<K, V> tmp = root.firstNode(this, Intent.READ);
-            free(root);
+            Node<K, V> tmp = root.firstNode(provider, Intent.READ);
+            provider.free(root);
             root = tmp;
         }
+        
+        System.out.println("REMOVED: " + key + " -> " + entry);
+        return entry != null ? entry.getValue() : null;
     }
     
     public static void main(String[] args) {
-        DefaultNodeProvider<String, String> t 
-            = new DefaultNodeProvider<String, String>();
+        BeeTree<String, String> t = new BeeTree<String, String>();
         
         t.put("3", "3");
         t.put("5", "5");
         t.put("9", "9");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         t.put("7", "7");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         t.put("1", "1");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         t.put("2", "2");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         t.put("8", "8");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         t.put("6", "6");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         t.put("0", "0");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         t.put("4", "4");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("8");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("6");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("4");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("5");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("3");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("2");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("9");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
-        System.out.println();
-        t.remove("7");
-        System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        //System.out.println();
+        //t.remove("7");
+        //System.out.println("ROOT: " + t.root);
+        //System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("1");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("0");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         System.out.println();
         t.remove("BLA");
         System.out.println("ROOT: " + t.root);
-        System.out.println("NODES: " + t.nodes);
+        System.out.println("NODES: " + t.provider);
         
         /*t.put("4", "4");
         System.out.println("ROOT: " + t.root);
@@ -252,7 +221,7 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         System.out.println("7: " + t.get("XXX"));
         System.out.println("8: " + t.get("Roger"));*/
         
-        /*long startTime = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
         int count = 0;
         for (int i = 'A'; i <= 'Z'; i++) {
             for (int j = 0; j < 1000; j++) {
@@ -272,29 +241,6 @@ public class DefaultNodeProvider<K, V> implements NodeProvider<K, V> {
         }
         
         long time = System.currentTimeMillis() - startTime;
-        System.out.println("Done: " + count + ", " + time);*/
-    }
-    
-    private static class DefaultComparator<K> implements Comparator<K> {
-        
-        private static final DefaultComparator<?> COMPARATOR 
-            = new DefaultComparator<Object>();
-        
-        @SuppressWarnings("unchecked")
-        public static <K> Comparator<K> create() {
-            return (Comparator<K>)COMPARATOR;
-        }
-        
-        @SuppressWarnings("unchecked")
-        @Override
-        public int compare(K o1, K o2) {
-            if (o1 == null) {
-                return o2 == null ? 0 : -1;
-            } else if (o2 == null) {
-                return 1;
-            }
-            
-            return ((Comparable<K>)o1).compareTo(o2);
-        }
+        System.out.println("Done: " + count + ", " + time);
     }
 }
