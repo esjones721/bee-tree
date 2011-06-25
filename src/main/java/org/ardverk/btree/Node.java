@@ -69,40 +69,64 @@ public class Node<K, V> {
         return nodes.remove(index);
     }
     
-    private Entry<K, V> firstEntry(boolean remove) {
-        if (remove) {
-            return entries.removeFirst();
-        }
+    private Entry<K, V> firstEntry() {
         return entries.getFirst();
     }
     
-    private Entry<K, V> lastEntry(boolean remove) {
-        if (remove) {
-            return entries.removeLast();
-        }
+    private Entry<K, V> removeFirstEntry() {
+        return entries.removeFirst();
+    }
+    
+    private Entry<K, V> lastEntry() {
         return entries.getLast();
     }
     
-    private NodeId firstNodeId(boolean remove) {
-        if (remove) {
-            return nodes.removeFirst();
-        }
+    private Entry<K, V> removeLastEntry() {
+        return entries.removeLast();
+    }
+    
+    private NodeId firstNodeId() {
         return nodes.getFirst();
     }
     
-    private NodeId lastNodeId(boolean remove) {
-        if (remove) {
-            return nodes.removeLast();
-        }
+    private NodeId removeFirstNodeId() {
+        return nodes.removeFirst();
+    }
+    
+    private NodeId lastNodeId() {
         return nodes.getLast();
     }
     
+    private NodeId removeLastNodeId() {
+        return nodes.removeLast();
+    }
+    
+    public Entry<K, V> firstEntry(NodeProvider<K, V> provider, Intent intent) {
+        Node<K, V> node = this;
+        while (!node.isLeaf()) {
+            node = node.firstNode(provider, intent);
+        }
+        
+        return node.firstEntry();
+    }
+    
+    public Entry<K, V> lastEntry(NodeProvider<K, V> provider, Intent intent) {
+        Node<K, V> node = this;
+        while (!node.isLeaf()) {
+            node = node.lastNode(provider, intent);
+        }
+        
+        return node.lastEntry();
+    }
+    
     Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
-        return getNode(provider, 0, intent);
+        NodeId first = firstNodeId();
+        return provider.get(first, intent);
     }
     
     private Node<K, V> lastNode(NodeProvider<K, V> provider, Intent intent) {
-        return getNode(provider, getNodeCount()-1, intent);
+        NodeId last = lastNodeId();
+        return provider.get(last, intent);
     }
     
     private NodeId getNodeId(int index) {
@@ -115,47 +139,41 @@ public class Node<K, V> {
         return provider.get(nodeId, intent);
     }
     
-    private Entry<K, V> getEntry(NodeProvider<K, V> provider, 
-            K key, int index, Intent intent) {
-        Node<K, V> node = getNode(provider, index, intent);
-        return node.get(provider, key);
-    }
-    
-    private Entry<K, V> set(int index, Entry<K, V> entry) {
+    private Entry<K, V> setEntry(int index, Entry<K, V> entry) {
         return entries.set(index, entry);
     }
     
-    public void addLast(Entry<K, V> entry) {
+    public void addLastEntry(Entry<K, V> entry) {
         entries.addLast(entry);
     }
     
-    public void addFirst(Entry<K, V> entry) {
+    public void addFirstEntry(Entry<K, V> entry) {
         entries.addFirst(entry);
     }
     
-    private void add(int index, Entry<K, V> entry) {
+    private void addEntry(int index, Entry<K, V> entry) {
         entries.add(index, entry);
     }
     
-    public void addLast(NodeId nodeId) {
+    public void addLastNodeId(NodeId nodeId) {
         nodes.addLast(nodeId);
     }
     
-    public void addFirst(NodeId nodeId) {
+    public void addFirstNodeId(NodeId nodeId) {
         nodes.addFirst(nodeId);
     }
     
-    private void add(int index, NodeId nodeId) {
+    private void addNodeId(int index, NodeId nodeId) {
         nodes.add(index, nodeId);
     }
     
-    public void add(Median<K, V> median) {
-        add(getEntryCount(), median);
+    public void addMedian(Median<K, V> median) {
+        addMedian(getEntryCount(), median);
     }
     
-    private void add(int index, Median<K, V> median) {
-        add(index, median.getEntry());
-        add(index+1, median.getNodeId());
+    private void addMedian(int index, Median<K, V> median) {
+        addEntry(index, median.getEntry());
+        addNodeId(index+1, median.getNodeId());
     }
     
     private int binarySearch(NodeProvider<K, V> provider, K key) {
@@ -174,7 +192,8 @@ public class Node<K, V> {
             return getEntry(index);
         }
         
-        return getEntry(provider, key, -index - 1, Intent.READ);
+        Node<K, V> node = getNode(provider, -index - 1, Intent.READ);
+        return node.ceilingEntry(provider, key);
     }
     
     public Entry<K, V> get(NodeProvider<K, V> provider, K key) {
@@ -187,7 +206,8 @@ public class Node<K, V> {
         
         // I didn't find it but I know where to look for it!
         if (!isLeaf()) {
-            return getEntry(provider, key, -index - 1, Intent.READ);
+            Node<K, V> node = getNode(provider, -index - 1, Intent.READ);
+            return node.get(provider, key);
         }
         return null;
     }
@@ -197,7 +217,7 @@ public class Node<K, V> {
         
         // Replace an existing Key-Value
         if (index >= 0) {
-            return set(index, new Entry<K, V>(key, value));
+            return setEntry(index, new Entry<K, V>(key, value));
         }
         
         assert (index < 0);
@@ -206,7 +226,7 @@ public class Node<K, V> {
         // Found a leaf where it should be stored!
         if (isLeaf()) {
             assert (!isOverflow());
-            add(index, new Entry<K, V>(key, value));
+            addEntry(index, new Entry<K, V>(key, value));
             return null;
         }
         
@@ -216,7 +236,7 @@ public class Node<K, V> {
         if (node.isOverflow()) {
             
             Median<K, V> median = node.split(provider);
-            add(index, median);
+            addMedian(index, median);
             
             Comparator<? super K> comparator = provider.comparator();
             int cmp = comparator.compare(key, median.getKey());
@@ -263,17 +283,17 @@ public class Node<K, V> {
         
         Node<K, V> left = getNode(provider, index, Intent.WRITE);
         if (!left.isUnderflow()) {
-            Entry<K, V> largest = left.findLargestEntry(provider);
-            entry = set(index, largest);
-            left.remove(provider, largest.getKey());
+            Entry<K, V> last = left.lastEntry(provider, Intent.WRITE);
+            entry = setEntry(index, last);
+            left.remove(provider, last.getKey());
             
         } else {
             
             Node<K, V> right = getNode(provider, index+1, Intent.WRITE);
             if (!right.isUnderflow()) {
-                Entry<K, V> smallest = right.findSmallestEntry(provider);
-                entry = set(index, smallest);
-                right.remove(provider, smallest.getKey());
+                Entry<K, V> first = right.firstEntry(provider, Intent.WRITE);
+                entry = setEntry(index, first);
+                right.remove(provider, first.getKey());
             } else {
                 
                 Entry<K, V> median = removeEntry(index);
@@ -299,12 +319,12 @@ public class Node<K, V> {
         
         // Borrow Entry from left sibling
         if (left != null && !left.isUnderflow()) {
-            Entry<K, V> last = left.lastEntry(true);
-            Entry<K, V> entry = set(index-1, last);
-            node.addFirst(entry);
+            Entry<K, V> last = left.removeLastEntry();
+            Entry<K, V> entry = setEntry(index-1, last);
+            node.addFirstEntry(entry);
             
             if (!node.isLeaf()) {
-                node.addFirst(left.lastNodeId(true));
+                node.addFirstNodeId(left.removeLastNodeId());
             }
         } else {
             
@@ -315,12 +335,12 @@ public class Node<K, V> {
             
             // Borrow entry from right sibling
             if (right != null && !right.isUnderflow()) {
-                Entry<K, V> first = right.firstEntry(true);
-                Entry<K, V> entry = set(index, first);
-                node.addLast(entry);
+                Entry<K, V> first = right.removeFirstEntry();
+                Entry<K, V> entry = setEntry(index, first);
+                node.addLastEntry(entry);
                 
                 if (!node.isLeaf()) {
-                    node.addLast(right.firstNodeId(true));
+                    node.addLastNodeId(right.removeFirstNodeId());
                 }
             
             // Neither sibling has enough Entries! Merge them!
@@ -362,24 +382,6 @@ public class Node<K, V> {
         }
     }
     
-    private Entry<K, V> findSmallestEntry(NodeProvider<K, V> provider) {
-        Node<K, V> node = this;
-        while (!node.isLeaf()) {
-            node = node.firstNode(provider, Intent.WRITE);
-        }
-        
-        return node.firstEntry(false);
-    }
-    
-    private Entry<K, V> findLargestEntry(NodeProvider<K, V> provider) {
-        Node<K, V> node = this;
-        while (!node.isLeaf()) {
-            node = node.lastNode(provider, Intent.WRITE);
-        }
-        
-        return node.lastEntry(false);
-    }
-    
     public Median<K, V> split(NodeProvider<K, V> provider) {
         
         boolean leaf = isLeaf();
@@ -393,14 +395,14 @@ public class Node<K, V> {
         
         if (!leaf) {
             NodeId nodeId = removeNodeId(m+1);
-            dst.addLast(nodeId);
+            dst.addLastNodeId(nodeId);
         }
         
         while (m < getEntryCount()) {
-            dst.addLast(removeEntry(m));
+            dst.addLastEntry(removeEntry(m));
             
             if (!leaf) {
-                dst.addLast(removeNodeId(m+1));
+                dst.addLastNodeId(removeNodeId(m+1));
             }
         }
         

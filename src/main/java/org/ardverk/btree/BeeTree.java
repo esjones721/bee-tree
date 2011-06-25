@@ -1,6 +1,5 @@
 package org.ardverk.btree;
 
-import java.util.Arrays;
 import java.util.Map;
 
 import org.ardverk.btree.Node.Median;
@@ -30,8 +29,8 @@ public class BeeTree<K, V> {
                 
                 Node<K, V> tmp = provider.allocate(false);
                 
-                tmp.addFirst(root.getNodeId());
-                tmp.add(median);
+                tmp.addFirstNodeId(root.getNodeId());
+                tmp.addMedian(median);
                 
                 root = tmp;
             }
@@ -63,6 +62,14 @@ public class BeeTree<K, V> {
         return root.ceilingEntry(provider, key);
     }
     
+    public Map.Entry<K, V> firstEntry() {
+        return root.firstEntry(provider, Intent.READ);
+    }
+    
+    public Map.Entry<K, V> lastEntry() {
+        return root.lastEntry(provider, Intent.READ);
+    }
+    
     public void clear() {
         synchronized (provider) {
             Node<K, V> tmp = root;
@@ -86,8 +93,10 @@ public class BeeTree<K, V> {
         System.out.println("ROOT: " + t.root);
         System.out.println("NODES: " + t.provider);
         
+        System.out.println("F: " + t.firstEntry());
+        System.out.println("L: " + t.lastEntry());
         System.out.println("C: " + t.ceilingEntry("6"));
-        System.exit(0);
+        //System.exit(0);
         
         t.put("1", "1");
         System.out.println("ROOT: " + t.root);
