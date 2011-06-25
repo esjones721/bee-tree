@@ -8,19 +8,25 @@ import org.ardverk.btree.AbstractNodeProvider;
 import org.ardverk.btree.Node;
 import org.ardverk.btree.NodeId;
 
-public class InMemoryNodeProvider<K, V> extends AbstractNodeProvider<K, V> {
+public class DefaultNodeProvider<K, V> extends AbstractNodeProvider<K, V> {
 
-    private static final int t = 2;
-    
     public final Map<NodeId, Node<K, V>> nodes 
         = new LinkedHashMap<NodeId, Node<K, V>>();
     
-    public InMemoryNodeProvider() {
+    public DefaultNodeProvider() {
         super();
     }
 
-    public InMemoryNodeProvider(Comparator<? super K> comparator) {
-        super(comparator);
+    public DefaultNodeProvider(Comparator<? super K> comparator, int t) {
+        super(comparator, t);
+    }
+
+    public DefaultNodeProvider(Comparator<? super K> c) {
+        super(c);
+    }
+
+    public DefaultNodeProvider(int t) {
+        super(t);
     }
 
     @Override
@@ -30,8 +36,8 @@ public class InMemoryNodeProvider<K, V> extends AbstractNodeProvider<K, V> {
     
     @Override
     public Node<K, V> allocate(boolean leaf) {
-        NodeId nodeId = new InMemoryNodeId();
-        Node<K, V> node = new Node<K, V>(leaf, nodeId, t);
+        Node<K, V> node = new Node<K, V>(
+                leaf, new DefaultNodeId(), t);
         
         nodes.put(node.getNodeId(), node);
         return node;

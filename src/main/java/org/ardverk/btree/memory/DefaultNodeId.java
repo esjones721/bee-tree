@@ -14,38 +14,37 @@
  *   limitations under the License.
  */
 
-package org.ardverk.btree;
+package org.ardverk.btree.memory;
 
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class Entry<K, V> implements Map.Entry<K, V> {
+import org.ardverk.btree.NodeId;
 
-    private final K key;
+class DefaultNodeId implements NodeId {
     
-    private final V value;
+    private static final AtomicInteger COUNTER = new AtomicInteger();
     
-    public Entry(K key, V value) {
-        this.key = key;
-        this.value = value;
-    }
-
+    private final int value = COUNTER.incrementAndGet();
+    
     @Override
-    public K getKey() {
-        return key;
-    }
-
-    @Override
-    public V getValue() {
+    public int hashCode() {
         return value;
     }
     
     @Override
-    public V setValue(V value) {
-        throw new UnsupportedOperationException();
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        } else if (!(o instanceof DefaultNodeId)) {
+            return false;
+        }
+        
+        DefaultNodeId other = (DefaultNodeId)o;
+        return value == other.value;
     }
-
+    
     @Override
     public String toString() {
-        return key + "=" + value;
+        return Integer.toString(value);
     }
 }
