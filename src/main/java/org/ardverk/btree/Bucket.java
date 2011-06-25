@@ -3,9 +3,11 @@ package org.ardverk.btree;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.NoSuchElementException;
 import java.util.RandomAccess;
 
 class Bucket<E> implements List<E>, RandomAccess {
@@ -13,6 +15,8 @@ class Bucket<E> implements List<E>, RandomAccess {
     protected final Object[] elements;
     
     protected int size = 0;
+    
+    private transient int modCount = 0;
     
     public Bucket(int maxSize) {
         this.elements = new Object[maxSize];
@@ -62,6 +66,7 @@ class Bucket<E> implements List<E>, RandomAccess {
         ++size;
         
         elements[index] = element;
+        ++modCount;
     }
     
     @Override
@@ -71,6 +76,8 @@ class Bucket<E> implements List<E>, RandomAccess {
         @SuppressWarnings("unchecked")
         E existing = (E)elements[index];
         elements[index] = element;
+        ++modCount;
+        
         return existing;
     }
     
@@ -107,6 +114,7 @@ class Bucket<E> implements List<E>, RandomAccess {
         --size;
         System.arraycopy(elements, index+1, elements, index, size-index);
         elements[size] = null;
+        ++modCount;
         
         return element;
     }
@@ -123,12 +131,51 @@ class Bucket<E> implements List<E>, RandomAccess {
         System.arraycopy(elements, index, elements, index + bucket.size, size - index);
         System.arraycopy(bucket.elements, 0, elements, index, bucket.size);
         size += bucket.size;
+        ++modCount;
     }
     
     @Override
     public void clear() {
         Arrays.fill(elements, null);
         size = 0;
+        ++modCount;
+    }
+    
+    @Override
+    public Iterator<E> iterator() {
+        return new Iterator<E>() {
+
+            private final int modCount = Bucket.this.modCount;
+            
+            private int index = 0;
+            
+            @Override
+            public boolean hasNext() {
+                return index < size;
+            }
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public E next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                
+                checkForComodification();
+                return (E)elements[index++];
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+            
+            private void checkForComodification() {
+                if (modCount != Bucket.this.modCount) {
+                    throw new ConcurrentModificationException();
+                }
+            }
+        };
     }
     
     @Override
@@ -148,11 +195,6 @@ class Bucket<E> implements List<E>, RandomAccess {
         return a;
     }
     
-    @Override
-    public Iterator<E> iterator() {
-        throw new UnsupportedOperationException();
-    }
-
     @Override
     public boolean contains(Object o) {
         throw new UnsupportedOperationException();

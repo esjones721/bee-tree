@@ -1,6 +1,10 @@
 package org.ardverk.btree;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.ardverk.btree.NodeProvider.Intent;
 
@@ -462,6 +466,36 @@ public class Node<K, V> {
         @Override
         public String toString() {
             return "<" + entry + ", " + nodeId + ">";
+        }
+    }
+    
+    private static class Foo<K, V> implements Iterator<Entry<K, V>> {
+
+        private final List<NodeId> stack = new ArrayList<NodeId>();
+        
+        private final NodeProvider<K, V> provider;
+        
+        public Foo(NodeProvider<K, V> provider, Node<K, V> node) {
+            this.provider = provider;
+        }
+        
+        @Override
+        public boolean hasNext() {
+            return !stack.isEmpty();
+        }
+
+        @Override
+        public Entry<K, V> next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            
+            return null;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
         }
     }
 }
