@@ -1,5 +1,6 @@
 package org.ardverk.btree;
 
+import java.util.Iterator;
 import java.util.Map;
 
 import org.ardverk.btree.Node.Median;
@@ -79,10 +80,22 @@ public class BeeTree<K, V> {
         }
     }
     
+    public Iterator<? extends Map.Entry<K, V>> iterator() {
+        return root.iterator(provider);
+    }
+    
+    public Iterator<? extends Map.Entry<K, V>> iterator(K key) {
+        return iterator(key, true);
+    }
+    
+    public Iterator<? extends Map.Entry<K, V>> iterator(K key, boolean inclusive) {
+        return root.iterator(provider, key, inclusive);
+    }
+    
     public static void main(String[] args) {
         
         BeeTree<String, String> t = new BeeTree<String, String>();
-        
+        if (false) {
         t.put("3", "3");
         t.put("5", "5");
         t.put("9", "9");
@@ -96,7 +109,6 @@ public class BeeTree<K, V> {
         System.out.println("F: " + t.firstEntry());
         System.out.println("L: " + t.lastEntry());
         System.out.println("C: " + t.ceilingEntry("6"));
-        //System.exit(0);
         
         t.put("1", "1");
         System.out.println("ROOT: " + t.root);
@@ -253,6 +265,7 @@ public class BeeTree<K, V> {
         System.out.println("6: " + t.get("XX"));
         System.out.println("7: " + t.get("XXX"));
         System.out.println("8: " + t.get("Roger"));*/
+        }
         
         long startTime = System.currentTimeMillis();
         int count = 0;
@@ -274,6 +287,18 @@ public class BeeTree<K, V> {
         }
         
         long time = System.currentTimeMillis() - startTime;
+        System.out.println("Done: " + count + ", " + time);
+        
+        count = 0;
+        startTime = System.currentTimeMillis();
+        Iterator<? extends Map.Entry<String, String>> it = t.iterator();
+        while (it.hasNext()) {
+            //System.out.println("VALUE: " + it.next());
+            it.next();
+            count++;
+        }
+        
+        time = System.currentTimeMillis() - startTime;
         System.out.println("Done: " + count + ", " + time);
     }
 }

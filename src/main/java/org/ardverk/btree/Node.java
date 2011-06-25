@@ -1,9 +1,9 @@
 package org.ardverk.btree;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.ardverk.btree.NodeProvider.Intent;
@@ -426,6 +426,53 @@ public class Node<K, V> {
         return dst;
     }
     
+    public Iterator<Entry<K, V>> iterator(NodeProvider<K, V> provider) {
+        Deque<Index> stack = new ArrayDeque<Index>();
+        
+        stack.push(new Index(getNodeId(), 0));
+        walk(provider, this, stack.peek(), stack);
+        
+        return new NodeIterator<K, V>(provider, stack);
+    }
+    
+    public Iterator<Entry<K, V>> iterator(NodeProvider<K, V> provider, 
+            K key, boolean inclusive) {
+        return iterator(provider, key, inclusive, new ArrayDeque<Index>());
+    }
+    
+    private Iterator<Entry<K, V>> iterator(NodeProvider<K, V> provider, 
+            K key, boolean inclusive, Deque<Index> stack) {
+        
+        int index = binarySearch(provider, key);
+        
+        int path = (index < 0 ? -index - 1 : index);
+        stack.push(new Index(getNodeId(), path));
+        
+        if (index >= 0 || isLeaf()) {
+            
+            if (!inclusive && index >= 0) {
+                stack.peek().next();
+            }
+            
+            return new NodeIterator<K, V>(provider, stack);
+        }
+        
+        Node<K, V> node = getNode(provider, path, Intent.READ);
+        return node.iterator(provider, key, inclusive, stack);
+    }
+    
+    private static <K, V> Index walk(NodeProvider<K, V> provider, 
+            Node<K, V> node, Index index, Deque<Index> stack) {
+        
+        while (!node.isLeaf()) {
+            node = node.getNode(provider, index.get(), Intent.READ);
+            index = new Index(node.getNodeId(), 0);
+            stack.push(index);
+        }
+        
+        return index;
+    }
+    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -469,33 +516,115 @@ public class Node<K, V> {
         }
     }
     
-    private static class Foo<K, V> implements Iterator<Entry<K, V>> {
+    private static class NodeIterator<K, V> implements Iterator<Entry<K, V>> {
 
-        private final List<NodeId> stack = new ArrayList<NodeId>();
-        
         private final NodeProvider<K, V> provider;
         
-        public Foo(NodeProvider<K, V> provider, Node<K, V> node) {
+        private final Deque<Index> stack;
+        
+        private Index index = null;
+        
+        private Node<K, V> node = null;
+        
+        private Entry<K, V> next = null;
+        
+        public NodeIterator(NodeProvider<K, V> provider, Deque<Index> stack) {
             this.provider = provider;
+            this.stack = stack;
+            
+            if (!stack.isEmpty()) {
+                index = stack.poll();
+                node = provider.get(index.getNodeId(), Intent.READ);
+                
+                next = nextEntry();
+            }
+        }
+        
+        private Entry<K, V> nextEntry() {
+            
+            if (index.hasNext(node)) {
+                return index.next(node);
+            }
+            
+            if (!stack.isEmpty()) {
+                index = stack.peek();
+                node = provider.get(index.getNodeId(), Intent.READ);
+                assert (!node.isLeaf());
+                
+                if (index.hasNext(node)) {
+                    Entry<K, V> next = index.next(node);
+                    
+                    index = Node.walk(provider, node, index, stack);
+                    node = provider.get(index.getNodeId(), Intent.READ);
+                    
+                    return next;
+                }
+                
+                stack.pop();
+                return nextEntry();
+            }
+            
+            return null;
         }
         
         @Override
         public boolean hasNext() {
-            return !stack.isEmpty();
+            return next != null;
         }
-
+        
         @Override
         public Entry<K, V> next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
             
-            return null;
+            try {
+                return next;
+            } finally {
+                next = nextEntry();
+            }
         }
 
         @Override
         public void remove() {
             throw new UnsupportedOperationException();
+        }
+    }
+    
+    private static class Index {
+        
+        private final NodeId nodeId;
+        
+        private int index;
+        
+        public Index(NodeId nodeId, int index) {
+            this.nodeId = nodeId;
+            this.index = index;
+        }
+        
+        public NodeId getNodeId() {
+            return nodeId;
+        }
+        
+        public boolean hasNext(Node<?, ?> node) {
+            return index < node.getEntryCount();
+        }
+        
+        public <K, V> Entry<K, V> next(Node<K, V> node) {
+            return node.getEntry(index++);
+        }
+        
+        public int get() {
+            return index;
+        }
+        
+        public int next() {
+            return index++;
+        }
+        
+        @Override
+        public String toString() {
+            return "<" + nodeId + ", " + index + ">";
         }
     }
 }
