@@ -42,6 +42,13 @@ public class Bucket<E> implements List<E>, RandomAccess {
         this.elements = new Object[maxSize];
     }
     
+    public Bucket(Bucket<? extends E> bucket) {
+        this(bucket.elements.length);
+        
+        size = bucket.size;
+        System.arraycopy(bucket.elements, 0, elements, 0, size);
+    }
+    
     @Override
     public int size() {
         return size;
@@ -79,6 +86,7 @@ public class Bucket<E> implements List<E>, RandomAccess {
         RangeCheck(index);
         
         if (size >= elements.length) {
+            System.out.println(toString());
             throw new ArrayIndexOutOfBoundsException("Max Size");
         }
         

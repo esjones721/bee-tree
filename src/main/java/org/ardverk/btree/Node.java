@@ -20,7 +20,6 @@ import java.util.ArrayDeque;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.ardverk.btree.NodeProvider.Intent;
@@ -36,30 +35,52 @@ public class Node<K, V> {
     
     private final Node.Id nodeId;
     
+    private final int height;
+    
+    private final int t;
+    
     private final Bucket<Tuple<K, V>> tuples;
     
     private final Bucket<Node.Id> nodes;
     
-    public Node(Node.Id nodeId, boolean leaf, int t) {
-        this(nodeId, new Bucket<Tuple<K, V>>(2*t-1), 
-                createBucket(leaf, 2*t));
+    public Node(Node.Id nodeId, int height, int t) {
+        this(nodeId, height, t, new Bucket<Tuple<K, V>>(2*t-1), 
+                createBucket(height, 2*t));
     }
     
-    public Node(Node.Id nodeId, Bucket<Tuple<K, V>> entries, 
+    public Node(Node.Id nodeId, int height, int t, 
+            Bucket<Tuple<K, V>> entries, 
             Bucket<Node.Id> nodes) {
         
         this.nodeId = nodeId;
+        this.height = height;
+        this.t = t;
         this.tuples = entries;
         
-        if (nodes != null && nodes.isEmpty()) {
+        if (height == 0) {
             nodes = null;
         }
         
         this.nodes = nodes;
+        
+        assert (entries.getMaxSize() == 2*t-1);
+        assert (nodes == null || nodes.getMaxSize() == 2*t);
     }
     
     public Node.Id getNodeId() {
         return nodeId;
+    }
+    
+    public int getHeight() {
+        return height;
+    }
+    
+    public Bucket<Tuple<K, V>> getTuples() {
+        return tuples;
+    }
+    
+    public Bucket<Node.Id> getNodeIds() {
+        return nodes;
     }
     
     public int getNodeCount() {
@@ -79,12 +100,11 @@ public class Node<K, V> {
     }
     
     public boolean isUnderflow() {
-        int t = (tuples.getMaxSize()+1)/2;
         return tuples.size() < t;
     }
     
     public boolean isLeaf() {
-        return nodes == null;
+        return height == 0;
     }
     
     public Tuple<K, V> getTuple(int index) {
@@ -415,7 +435,7 @@ public class Node<K, V> {
         int tupleCount = getTupleCount();
         int m = tupleCount/2;
         
-        Node<K, V> dst = provider.allocate(leaf);
+        Node<K, V> dst = provider.allocate(height);
         
         Tuple<K, V> median = removeTuple(m);
         
@@ -437,7 +457,7 @@ public class Node<K, V> {
     
     public Node<K, V> copy(NodeProvider<K, V> provider) {
         boolean leaf = isLeaf();
-        Node<K, V> dst = provider.allocate(leaf);
+        Node<K, V> dst = provider.allocate(height);
         
         dst.tuples.addAll(tuples);
         
@@ -448,7 +468,7 @@ public class Node<K, V> {
         return dst;
     }
     
-    public Iterator<Map.Entry<K, V>> iterator(NodeProvider<K, V> provider) {
+    public Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider) {
         Deque<Index> stack = new ArrayDeque<Index>();
         
         stack.push(new Index(getNodeId(), 0));
@@ -457,12 +477,12 @@ public class Node<K, V> {
         return new NodeIterator<K, V>(provider, stack);
     }
     
-    public Iterator<Map.Entry<K, V>> iterator(NodeProvider<K, V> provider, 
+    public Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider, 
             K key, boolean inclusive) {
         return iterator(provider, key, inclusive, new ArrayDeque<Index>());
     }
     
-    private Iterator<Map.Entry<K, V>> iterator(NodeProvider<K, V> provider, 
+    private Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider, 
             K key, boolean inclusive, Deque<Index> stack) {
         
         int index = binarySearch(provider, key);
@@ -509,8 +529,8 @@ public class Node<K, V> {
         return sb.toString();
     }
     
-    private static Bucket<Node.Id> createBucket(boolean leaf, int maxSize) {
-        if (!leaf) {
+    private static Bucket<Node.Id> createBucket(int height, int maxSize) {
+        if (0 < height) {
             return new Bucket<Node.Id>(maxSize);
         }
         return null;
@@ -545,7 +565,7 @@ public class Node<K, V> {
         }
     }
     
-    private static class NodeIterator<K, V> implements Iterator<Map.Entry<K, V>> {
+    private static class NodeIterator<K, V> implements Iterator<Tuple<K, V>> {
 
         private final NodeProvider<K, V> provider;
         

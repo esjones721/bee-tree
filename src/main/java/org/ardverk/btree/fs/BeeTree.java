@@ -19,9 +19,7 @@ package org.ardverk.btree.fs;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
-import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,14 +29,17 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.ardverk.btree.AbstractBeeTree;
 import org.ardverk.btree.Bucket;
 import org.ardverk.btree.Node;
-import org.ardverk.btree.NodeProvider;
-import org.ardverk.btree.Tuple;
 import org.ardverk.btree.Node.Median;
+import org.ardverk.btree.NodeProvider;
 import org.ardverk.btree.NodeProvider.Intent;
+import org.ardverk.btree.Tuple;
+import org.ardverk.btree.io.DataUtils;
+import org.ardverk.btree.io.IoUtils;
 
 public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
     
@@ -46,27 +47,45 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
     
     private final Object lock = new Object();
     
-    private final FileSystemProvider provider = new FileSystemProvider();
+    private final FileSystemProvider provider;
     
-    private final File directory;
+    private final TupleBinding<K, V> binding;
     
     private volatile Node<byte[], byte[]> root = null;
     
-    public BeeTree(File directory) {
-        this.directory = directory;
+    public BeeTree(File directory, TupleBinding<K, V> binding) {
+        this(directory, binding, T);
+    }
+    
+    public BeeTree(File directory, TupleBinding<K, V> binding, int t) {
+        this.provider = new FileSystemProvider(directory, t);
+        
+        this.binding = binding;
         
         File file = new File(directory, "0");
         
         if (!file.exists()) {
-            root = provider.allocate(true);
+            root = provider.allocate(0);
         } else {
             root = provider.load(file);
         }
     }
+    
+    private Map.Entry<K, V> tupleToEntry(Tuple<byte[], byte[]> tuple) {
+        return tuple != null ? binding.tupleToEntry(tuple) : null;
+    }
+    
+    private K tupleToKey(Tuple<byte[], ?> tuple) {
+        return tuple != null ? binding.entryToKey(tuple.getKey()) : null;
+    }
+    
+    private V tupleToValue(Tuple<?, byte[]> tuple) {
+        return tuple != null ? binding.entryToValue(tuple.getValue()) : null;
+    }
 
     @Override
     public void close() throws IOException {
-        File file = new File(directory, "0");
+        File file = new File(provider.directory, "0");
         
         DataOutputStream out = null;
         try {
@@ -75,7 +94,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                         new FileOutputStream(file)));
             ((StringId)root.getNodeId()).writeTo(out);
         } finally {
-            close(out);
+            IoUtils.close(out);
         }
         
         provider.store(root);
@@ -87,12 +106,13 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
 
     @Override
     public V put(K key, V value) {
-        Tuple<K, V> existing = null;
+        Tuple<byte[], byte[]> existing = null;
         synchronized (provider) {
             if (root.isOverflow()) {
                 Median<byte[], byte[]> median = root.split(provider);
                 
-                Node<byte[], byte[]> tmp = provider.allocate(false);
+                int height = root.getHeight() + 1;
+                Node<byte[], byte[]> tmp = provider.allocate(height);
                 
                 tmp.addFirstNodeId(root.getNodeId());
                 tmp.addMedian(median);
@@ -100,9 +120,11 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                 root = tmp;
             }
             
-            existing = root.put(provider, key, value);
+            existing = root.put(provider, 
+                    binding.objectToKey(key), 
+                    binding.objectToValue(value));
         }
-        return existing != null ? existing.getValue() : null;
+        return tupleToValue(existing);
     }
 
     @Override
@@ -110,50 +132,59 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
         Tuple<byte[], byte[]> tuple = null;
         
         synchronized (provider) {
-            tuple = root.remove(provider, key);
+            tuple = root.remove(provider, 
+                    binding.objectToKey(key));
             
             if (!root.isLeaf() && root.isEmpty()) {
-                Node<byte[], byte[]> tmp = root.firstNode(provider, Intent.READ);
+                Node<byte[], byte[]> tmp = root.firstNode(
+                        provider, Intent.READ);
                 provider.free(root);
                 root = tmp;
             }
         }
         
-        return tuple != null ? tuple.getValue() : null;
+        return tupleToValue(tuple);
     }
 
     @Override
     public V get(K key) {
-        Tuple<K, V> tuple = root.get(provider, key);
-        return tuple != null ? tuple.getValue() : null;
+        Tuple<byte[], byte[]> tuple = root.get(provider, 
+                binding.objectToKey(key));
+        return tupleToValue(tuple);
     }
     
     @Override
     public boolean contains(K key) {
-        Tuple<K, V> tuple = root.get(provider, key);
+        Tuple<byte[], byte[]> tuple = root.get(provider, 
+                binding.objectToKey(key));
         return tuple != null;
     }
     
     @Override
     public Map.Entry<K, V> ceilingEntry(K key) {
-        return root.ceilingTuple(provider, key);
+        Tuple<byte[], byte[]> tuple 
+            = root.ceilingTuple(provider, 
+                binding.objectToKey(key));
+        return tupleToEntry(tuple);
     }
 
     @Override
     public Map.Entry<K, V> firstEntry() {
-        return root.firstTuple(provider, Intent.READ);
+        Tuple<byte[], byte[]> tuple = root.firstTuple(provider, Intent.READ);
+        return tupleToEntry(tuple);
     }
 
     @Override
     public Map.Entry<K, V> lastEntry() {
-        return root.lastTuple(provider, Intent.READ);
+        Tuple<byte[], byte[]> tuple = root.lastTuple(provider, Intent.READ);
+        return tupleToEntry(tuple);
     }
 
     @Override
     public void clear() {
         synchronized (provider) {
             Node<byte[], byte[]> tmp = root;
-            root = provider.allocate(true);
+            root = provider.allocate(0);
             
             provider.free(tmp);
         }
@@ -165,42 +196,16 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
     }
 
     @Override
-    public Iterator<Map.Entry<K, V>> iterator(K key) {
-        return null;
-    }
-
-    @Override
     public Iterator<Map.Entry<K, V>> iterator(K key, boolean inclusive) {
-        return null;
+        Iterator<Tuple<byte[], byte[]>> it = root.iterator(
+                provider, binding.objectToKey(key), inclusive);
+        return new EntryIterator(it);
     }
 
     @Override
     public Iterator<Map.Entry<K, V>> iterator() {
-        return null;
-    }
-    
-    private static void close(Closeable c) {
-        if (c != null) {
-            try {
-                c.close();
-            } catch (IOException err) {}
-        }
-    }
-    
-    private static void writeBytes(DataOutput out, byte[] data) throws IOException {
-        int length = (data != null ? data.length : 0);
-        out.writeInt(length);
-        
-        if (0 < length) {
-            out.write(data);
-        }
-    }
-    
-    private static byte[] readBytes(DataInput in) throws IOException {
-        int length = in.readInt();
-        byte[] data = new byte[length];
-        in.readFully(data);
-        return data;
+        Iterator<Tuple<byte[], byte[]>> it = root.iterator(provider);
+        return new EntryIterator(it);
     }
     
     private class FileSystemProvider implements NodeProvider<byte[], byte[]> {
@@ -216,7 +221,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                 
                 Node<byte[], byte[]> node = eldest.getValue();
                 
-                if (size() >= T) {
+                if (size() >= 16) {
                     store(node);
                     return true;
                 }
@@ -225,10 +230,26 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
             }
         };
 
+        private final File directory;
+        
+        private final int t;
+        
+        public FileSystemProvider(File directory, int t) {
+            this.directory = directory;
+            this.t = t;
+        }
+        
         @Override
-        public Node<byte[], byte[]> allocate(boolean leaf) {
+        public Node<byte[], byte[]> allocate(int height) {
             StringId nodeId = StringId.create();
-            return new Node<byte[], byte[]>(nodeId, leaf, T);
+            
+            Node<byte[], byte[]> node 
+                = new Node<byte[], byte[]>(
+                    nodeId, height, t);
+            
+            nodes.put(nodeId, node);
+            
+            return node;
         }
 
         @Override
@@ -264,7 +285,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
             } catch (IOException err) {
                 throw new IllegalStateException(err);
             } finally {
-                close(in);
+                IoUtils.close(in);
             }
             
             return load(nodeId);
@@ -282,35 +303,37 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                             new BufferedInputStream(
                                 new FileInputStream(file)));
                     
+                    int height = in.readInt();
+                    
                     int tupleCount = in.readInt();
                     Bucket<Tuple<byte[], byte[]>> tuples 
-                        = new Bucket<Tuple<byte[], byte[]>>(tupleCount);
+                        = new Bucket<Tuple<byte[], byte[]>>(2*t-1);
                     
                     for (int i = 0; i < tupleCount; i++) {
-                        byte[] key = readBytes(in);
-                        byte[] value = readBytes(in);
+                        byte[] key = DataUtils.readBytes(in);
+                        byte[] value = DataUtils.readBytes(in);
                         
                         tuples.add(new Tuple<byte[], byte[]>(key, value));
                     }
                     
-                    int nodeCount = in.readInt();
                     Bucket<Node.Id> nodes = null;
                     
-                    if (0 < nodeCount) {
-                        nodes = new Bucket<Node.Id>(nodeCount);
+                    if (0 < height) {
+                        nodes = new Bucket<Node.Id>(2*t);
+
+                        int nodeCount = in.readInt();
                         for (int i = 0; i < nodeCount; i++) {
                             nodes.add(StringId.valueOf(in));
                         }
                     }
                     
-                    assert (nodeCount == 0 || nodeCount-1 == tupleCount);
-                    
-                    node = new Node<byte[], byte[]>(nodeId, tuples, nodes);
+                    node = new Node<byte[], byte[]>(nodeId, 
+                            height, t, tuples, nodes);
                     
                 } catch (IOException err) {
                     throw new IllegalStateException(err);
                 } finally {
-                    close(in);
+                    IoUtils.close(in);
                 }
             }
             
@@ -328,27 +351,30 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                             new BufferedOutputStream(
                                 new FileOutputStream(file)));
                     
+                    int height = node.getHeight();
+                    out.writeInt(height);
+                    
                     int tupleCount = node.getTupleCount();
                     out.writeInt(tupleCount);
                     for (int i = 0; i < tupleCount; i++) {
-                        Tuple<byte[], byte[]> entry = node.getTuple(i);
-                        
-                        writeBytes(out, entry.getKey());
-                        writeBytes(out, entry.getValue());
+                        Tuple<byte[], byte[]> tuple = node.getTuple(i);
+                        DataUtils.writeBytes(out, tuple.getKey());
+                        DataUtils.writeBytes(out, tuple.getValue());
                     }
                     
-                    int nodeCount = node.getNodeCount();
-                    out.writeInt(nodeCount);
-                    for (int i = 0; i < nodeCount; i++) {
-                        Node.Id childId = node.getNodeId(i);
-                        
-                        ((StringId)childId).writeTo(out);
+                    if (0 < height) {
+                        int nodeCount = node.getNodeCount();
+                        out.writeInt(nodeCount);
+                        for (int i = 0; i < nodeCount; i++) {
+                            Node.Id childId = node.getNodeId(i);
+                            ((StringId)childId).writeTo(out);
+                        }
                     }
                     
                 } catch (IOException err) {
                     throw new IllegalStateException(err);
                 } finally {
-                    close(out);
+                    IoUtils.close(out);
                 }
             }
         }
@@ -358,5 +384,69 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
             File file = new File(directory, nodeId.toString());
             file.delete();
         }
+    }
+    
+    private class EntryIterator implements Iterator<Map.Entry<K, V>> {
+        
+        private final Iterator<Tuple<byte[], byte[]>> it;
+
+        public EntryIterator(Iterator<Tuple<byte[], byte[]>> it) {
+            this.it = it;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return it.hasNext();
+        }
+
+        @Override
+        public Entry<K, V> next() {
+            return tupleToEntry(it.next());
+        }
+
+        @Override
+        public void remove() {
+            it.remove();
+        }
+    }
+    
+    public static void main(String[] args) throws Exception {
+        File directory = new File("tree");
+        directory.mkdirs();
+        TupleBinding<String, String> binding 
+            = new TupleBinding<String, String>(
+                StringEntryBinding.BINDING, 
+                StringEntryBinding.BINDING);
+        
+        BeeTree<String, String> tree = new BeeTree<String, String>(
+                directory, binding);
+        
+        foo(tree);
+        
+        tree.close();
+    }
+    
+    private static void foo(BeeTree<String, String> tree) {
+        long startTime = System.currentTimeMillis();
+        int count = 0;
+        for (int i = 'A'; i <= 'Z'; i++) {
+            for (int j = 0; j < 1000; j++) {
+                String key = Character.toString((char)i);
+                for (int k = 0; k < j; k++) {
+                    key += Character.toString((char)i);
+                }
+                
+                tree.put(key, key);
+                ++count;
+                
+                String found = tree.get(key);
+                if (found == null || !found.equals(key)) {
+                    throw new IllegalStateException("key=" + key + ", found=" + found);
+                }
+            }
+        }
+        
+        long time = System.currentTimeMillis() - startTime;
+        System.out.println("Done: " + count + ", " + time);
     }
 }
