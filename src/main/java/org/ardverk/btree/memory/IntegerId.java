@@ -18,9 +18,9 @@ package org.ardverk.btree.memory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.ardverk.btree.NodeId;
+import org.ardverk.btree.Node;
 
-class DefaultNodeId implements NodeId {
+class IntegerId implements Node.Id {
     
     private static final AtomicInteger COUNTER = new AtomicInteger();
     
@@ -35,11 +35,11 @@ class DefaultNodeId implements NodeId {
     public boolean equals(Object o) {
         if (o == this) {
             return true;
-        } else if (!(o instanceof DefaultNodeId)) {
+        } else if (!(o instanceof IntegerId)) {
             return false;
         }
         
-        DefaultNodeId other = (DefaultNodeId)o;
+        IntegerId other = (IntegerId)o;
         return value == other.value;
     }
     

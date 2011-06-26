@@ -17,14 +17,19 @@
 package org.ardverk.btree;
 
 import java.util.Map;
+import java.util.Map.Entry;
 
-public class Entry<K, V> implements Map.Entry<K, V> {
+/**
+ * An immutable Key-Value pair. It implements the {@link Entry} interface
+ * for convenience/compatibility purposes. 
+ */
+public class Tuple<K, V> implements Map.Entry<K, V> {
 
     private final K key;
     
     private final V value;
     
-    public Entry(K key, V value) {
+    public Tuple(K key, V value) {
         this.key = key;
         this.value = value;
     }

@@ -29,7 +29,7 @@ public interface NodeProvider<K, V> {
     
     public void free(Node<? extends K, ? extends V> node);
     
-    public Node<K, V> get(NodeId nodeId, Intent intent);
+    public Node<K, V> get(Node.Id nodeId, Intent intent);
     
     public Comparator<? super K> comparator();
 }

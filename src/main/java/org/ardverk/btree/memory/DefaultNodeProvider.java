@@ -6,12 +6,11 @@ import java.util.Map;
 
 import org.ardverk.btree.AbstractNodeProvider;
 import org.ardverk.btree.Node;
-import org.ardverk.btree.NodeId;
 
 public class DefaultNodeProvider<K, V> extends AbstractNodeProvider<K, V> {
 
-    public final Map<NodeId, Node<K, V>> nodes 
-        = new LinkedHashMap<NodeId, Node<K, V>>();
+    public final Map<Node.Id, Node<K, V>> nodes 
+        = new LinkedHashMap<Node.Id, Node<K, V>>();
     
     public DefaultNodeProvider() {
         super();
@@ -30,14 +29,14 @@ public class DefaultNodeProvider<K, V> extends AbstractNodeProvider<K, V> {
     }
 
     @Override
-    public Node<K, V> get(NodeId nodeId, Intent intent) {
+    public Node<K, V> get(Node.Id nodeId, Intent intent) {
         return nodes.get(nodeId);
     }
     
     @Override
     public Node<K, V> allocate(boolean leaf) {
         Node<K, V> node = new Node<K, V>(
-                leaf, new DefaultNodeId(), t);
+                new IntegerId(), leaf, t);
         
         nodes.put(node.getNodeId(), node);
         return node;

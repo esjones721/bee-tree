@@ -26,7 +26,11 @@ import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.RandomAccess;
 
-class Bucket<E> implements List<E>, RandomAccess {
+/**
+ * A {@link Bucket} is a fixed-size ADT that implements some but not 
+ * all {@link List} operations.
+ */
+public class Bucket<E> implements List<E>, RandomAccess {
 
     protected final Object[] elements;
     

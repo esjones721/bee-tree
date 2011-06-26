@@ -20,9 +20,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-class EntryUtils {
+class TupleUtils {
 
-    private EntryUtils() {}
+    private TupleUtils() {}
     
     public static <K> int binarySearch(List<? extends Map.Entry<? extends K, ?>> list, 
             K key, Comparator<? super K> comparator) {
@@ -38,9 +38,9 @@ class EntryUtils {
         while (low <= high) {
             int mid = (low + high) >>> 1;
             
-            Map.Entry<? extends K, ?> node = list.get(offset + mid);
+            Map.Entry<? extends K, ?> entry = list.get(offset + mid);
             
-            int cmp = comparator.compare(node.getKey(), key);
+            int cmp = comparator.compare(entry.getKey(), key);
 
             if (cmp < 0) {
                 low = mid + 1;

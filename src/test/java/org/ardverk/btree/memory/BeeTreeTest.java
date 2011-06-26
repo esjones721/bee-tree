@@ -1,4 +1,4 @@
-package org.ardverk.btree;
+package org.ardverk.btree.memory;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -7,7 +7,9 @@ public class BeeTreeTest {
 
     public static void main(String[] args) {
         
-        BeeTree<String, String> t = new BeeTree<String, String>();
+        org.ardverk.btree.memory.BeeTree<String, String> t 
+            = new org.ardverk.btree.memory.BeeTree<String, String>();
+        
         if (false) {
         t.put("3", "3");
         t.put("5", "5");

@@ -27,182 +27,187 @@ import org.ardverk.btree.NodeProvider.Intent;
 
 public class Node<K, V> {
     
-    private final NodeId nodeId;
+    /**
+     * 
+     */
+    public static interface Id {
+        
+    }
     
-    private final int t;
+    private final Node.Id nodeId;
     
-    private final Bucket<Entry<K, V>> entries;
+    private final Bucket<Tuple<K, V>> tuples;
     
-    private final Bucket<NodeId> nodes;
+    private final Bucket<Node.Id> nodes;
     
-    public Node(boolean leaf, NodeId nodeId, int t) {
+    public Node(Node.Id nodeId, boolean leaf, int t) {
+        this(nodeId, new Bucket<Tuple<K, V>>(2*t-1), 
+                createBucket(leaf, 2*t));
+    }
+    
+    public Node(Node.Id nodeId, Bucket<Tuple<K, V>> entries, 
+            Bucket<Node.Id> nodes) {
+        
         this.nodeId = nodeId;
-        this.t = t;
+        this.tuples = entries;
         
-        entries = new Bucket<Entry<K, V>>(2*t-1);
-        
-        Bucket<NodeId> nodes = null;
-        
-        if (!leaf) {
-            nodes = new Bucket<NodeId>(2*t);
+        if (nodes != null && nodes.isEmpty()) {
+            nodes = null;
         }
         
         this.nodes = nodes;
     }
     
-    public NodeId getNodeId() {
+    public Node.Id getNodeId() {
         return nodeId;
     }
     
     public int getNodeCount() {
-        return nodes.size();
+        return nodes != null ? nodes.size() : 0;
     }
     
-    public int getEntryCount() {
-        return entries.size();
+    public int getTupleCount() {
+        return tuples.size();
     }
     
     public boolean isEmpty() {
-        return entries.isEmpty();
+        return tuples.isEmpty();
     }
     
     public boolean isOverflow() {
-        return entries.isOverflow();
+        return tuples.isOverflow();
     }
     
     public boolean isUnderflow() {
-        return entries.size() < t;
+        int t = (tuples.getMaxSize()+1)/2;
+        return tuples.size() < t;
     }
     
     public boolean isLeaf() {
         return nodes == null;
     }
     
-    private Entry<K, V> getEntry(int index) {
-        return entries.get(index);
+    public Tuple<K, V> getTuple(int index) {
+        return tuples.get(index);
     }
     
-    private Entry<K, V> removeEntry(int index) {
-        return entries.remove(index);
+    private Tuple<K, V> removeTuple(int index) {
+        return tuples.remove(index);
     }
     
-    private NodeId removeNodeId(int index) {
+    private Tuple<K, V> firstTuple() {
+        return tuples.getFirst();
+    }
+    
+    private Tuple<K, V> lastTuple() {
+        return tuples.getLast();
+    }
+    
+    private Tuple<K, V> removeLastTuple() {
+        return tuples.removeLast();
+    }
+    
+    public Node.Id getNodeId(int index) {
+        return nodes.get(index);
+    }
+    
+    private Node.Id removeNodeId(int index) {
         return nodes.remove(index);
     }
     
-    private Entry<K, V> firstEntry() {
-        return entries.getFirst();
-    }
-    
-    private Entry<K, V> removeFirstEntry() {
-        return entries.removeFirst();
-    }
-    
-    private Entry<K, V> lastEntry() {
-        return entries.getLast();
-    }
-    
-    private Entry<K, V> removeLastEntry() {
-        return entries.removeLast();
-    }
-    
-    private NodeId firstNodeId() {
+    private Node.Id firstNodeId() {
         return nodes.getFirst();
     }
     
-    private NodeId removeFirstNodeId() {
+    private Node.Id removeFirstNodeId() {
         return nodes.removeFirst();
     }
     
-    private NodeId lastNodeId() {
+    private Node.Id lastNodeId() {
         return nodes.getLast();
     }
     
-    private NodeId removeLastNodeId() {
+    private Node.Id removeLastNodeId() {
         return nodes.removeLast();
     }
     
-    public Entry<K, V> firstEntry(NodeProvider<K, V> provider, Intent intent) {
+    public Tuple<K, V> firstTuple(NodeProvider<K, V> provider, Intent intent) {
         Node<K, V> node = this;
         while (!node.isLeaf()) {
             node = node.firstNode(provider, intent);
         }
         
-        return node.firstEntry();
+        return node.firstTuple();
     }
     
-    public Entry<K, V> lastEntry(NodeProvider<K, V> provider, Intent intent) {
+    public Tuple<K, V> lastTuple(NodeProvider<K, V> provider, Intent intent) {
         Node<K, V> node = this;
         while (!node.isLeaf()) {
             node = node.lastNode(provider, intent);
         }
         
-        return node.lastEntry();
+        return node.lastTuple();
     }
     
-    Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
-        NodeId first = firstNodeId();
+    public Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
+        Node.Id first = firstNodeId();
         return provider.get(first, intent);
     }
     
     private Node<K, V> lastNode(NodeProvider<K, V> provider, Intent intent) {
-        NodeId last = lastNodeId();
+        Node.Id last = lastNodeId();
         return provider.get(last, intent);
-    }
-    
-    private NodeId getNodeId(int index) {
-        return nodes.get(index);
     }
     
     private Node<K, V> getNode(NodeProvider<K, V> provider, 
             int index, Intent intent) {
-        NodeId nodeId = getNodeId(index);
+        Node.Id nodeId = getNodeId(index);
         return provider.get(nodeId, intent);
     }
     
-    private Entry<K, V> setEntry(int index, Entry<K, V> entry) {
-        return entries.set(index, entry);
+    private Tuple<K, V> setTuple(int index, Tuple<K, V> tuple) {
+        return tuples.set(index, tuple);
     }
     
-    public void addLastEntry(Entry<K, V> entry) {
-        entries.addLast(entry);
+    public void addTuple(Tuple<K, V> tuple) {
+        tuples.addLast(tuple);
     }
     
-    public void addFirstEntry(Entry<K, V> entry) {
-        entries.addFirst(entry);
+    public void addFirstTuple(Tuple<K, V> tuple) {
+        tuples.addFirst(tuple);
     }
     
-    private void addEntry(int index, Entry<K, V> entry) {
-        entries.add(index, entry);
+    private void addTuple(int index, Tuple<K, V> tuple) {
+        tuples.add(index, tuple);
     }
     
-    public void addLastNodeId(NodeId nodeId) {
+    public void addNodeId(Node.Id nodeId) {
         nodes.addLast(nodeId);
     }
     
-    public void addFirstNodeId(NodeId nodeId) {
+    public void addFirstNodeId(Node.Id nodeId) {
         nodes.addFirst(nodeId);
     }
     
-    private void addNodeId(int index, NodeId nodeId) {
+    private void addNodeId(int index, Node.Id nodeId) {
         nodes.add(index, nodeId);
     }
     
     public void addMedian(Median<K, V> median) {
-        addMedian(getEntryCount(), median);
+        addMedian(getTupleCount(), median);
     }
     
     private void addMedian(int index, Median<K, V> median) {
-        addEntry(index, median.getEntry());
+        addTuple(index, median.getTuple());
         addNodeId(index+1, median.getNodeId());
     }
     
     private int binarySearch(NodeProvider<K, V> provider, K key) {
         Comparator<? super K> comparator = provider.comparator();
-        return EntryUtils.binarySearch(entries, key, comparator);
+        return TupleUtils.binarySearch(tuples, key, comparator);
     }
     
-    public Entry<K, V> ceilingEntry(NodeProvider<K, V> provider, K key) {
+    public Tuple<K, V> ceilingTuple(NodeProvider<K, V> provider, K key) {
         int index = binarySearch(provider, key);
         
         if (index >= 0 || isLeaf()) {
@@ -210,19 +215,19 @@ public class Node<K, V> {
                 index = -index - 1;
             }
             
-            return getEntry(index);
+            return getTuple(index);
         }
         
         Node<K, V> node = getNode(provider, -index - 1, Intent.READ);
-        return node.ceilingEntry(provider, key);
+        return node.ceilingTuple(provider, key);
     }
     
-    public Entry<K, V> get(NodeProvider<K, V> provider, K key) {
+    public Tuple<K, V> get(NodeProvider<K, V> provider, K key) {
         int index = binarySearch(provider, key);
         
         // Found the Key?
         if (index >= 0) {
-            return getEntry(index);
+            return getTuple(index);
         }
         
         // I didn't find it but I know where to look for it!
@@ -233,12 +238,12 @@ public class Node<K, V> {
         return null;
     }
     
-    public Entry<K, V> put(NodeProvider<K, V> provider, K key, V value) {
+    public Tuple<K, V> put(NodeProvider<K, V> provider, K key, V value) {
         int index = binarySearch(provider, key);
         
         // Replace an existing Key-Value
         if (index >= 0) {
-            return setEntry(index, new Entry<K, V>(key, value));
+            return setTuple(index, new Tuple<K, V>(key, value));
         }
         
         assert (index < 0);
@@ -247,7 +252,7 @@ public class Node<K, V> {
         // Found a leaf where it should be stored!
         if (isLeaf()) {
             assert (!isOverflow());
-            addEntry(index, new Entry<K, V>(key, value));
+            addTuple(index, new Tuple<K, V>(key, value));
             return null;
         }
         
@@ -269,14 +274,14 @@ public class Node<K, V> {
         return node.put(provider, key, value);
     }
     
-    public Entry<K, V> remove(NodeProvider<K, V> provider, K key) {
+    public Tuple<K, V> remove(NodeProvider<K, V> provider, K key) {
         
         int index = binarySearch(provider, key);
         
         // It must be here if it's a leaf!
         if (isLeaf()) {
             if (index >= 0) {
-                return removeEntry(index);
+                return removeTuple(index);
             }
             return null;
         }
@@ -299,36 +304,36 @@ public class Node<K, V> {
         return node.remove(provider, key);
     }
     
-    private Entry<K, V> removeInternal(NodeProvider<K, V> provider, K key, int index) {
-        Entry<K, V> entry = null;
+    private Tuple<K, V> removeInternal(NodeProvider<K, V> provider, K key, int index) {
+        Tuple<K, V> tuple = null;
         
         Node<K, V> left = getNode(provider, index, Intent.WRITE);
         if (!left.isUnderflow()) {
-            Entry<K, V> last = left.lastEntry(provider, Intent.WRITE);
-            entry = setEntry(index, last);
+            Tuple<K, V> last = left.lastTuple(provider, Intent.WRITE);
+            tuple = setTuple(index, last);
             left.remove(provider, last.getKey());
             
         } else {
             
             Node<K, V> right = getNode(provider, index+1, Intent.WRITE);
             if (!right.isUnderflow()) {
-                Entry<K, V> first = right.firstEntry(provider, Intent.WRITE);
-                entry = setEntry(index, first);
+                Tuple<K, V> first = right.firstTuple(provider, Intent.WRITE);
+                tuple = setTuple(index, first);
                 right.remove(provider, first.getKey());
             } else {
                 
-                Entry<K, V> median = removeEntry(index);
+                Tuple<K, V> median = removeTuple(index);
                 removeNodeId(index+1);
                 
                 left.mergeWithRight(median, right);
                 
                 provider.free(right);
                 
-                entry = left.remove(provider, key);
+                tuple = left.remove(provider, key);
             }
         }
         
-        return entry;
+        return tuple;
     }
     
     private void fix(NodeProvider<K, V> provider, Node<K, V> node, int index) {
@@ -340,9 +345,9 @@ public class Node<K, V> {
         
         // Borrow Entry from left sibling
         if (left != null && !left.isUnderflow()) {
-            Entry<K, V> last = left.removeLastEntry();
-            Entry<K, V> entry = setEntry(index-1, last);
-            node.addFirstEntry(entry);
+            Tuple<K, V> last = left.removeLastTuple();
+            Tuple<K, V> tuple = setTuple(index-1, last);
+            node.addFirstTuple(tuple);
             
             if (!node.isLeaf()) {
                 node.addFirstNodeId(left.removeLastNodeId());
@@ -354,21 +359,21 @@ public class Node<K, V> {
                 right = getNode(provider, index+1, Intent.WRITE);
             }
             
-            // Borrow entry from right sibling
+            // Borrow tuple from right sibling
             if (right != null && !right.isUnderflow()) {
-                Entry<K, V> first = right.removeFirstEntry();
-                Entry<K, V> entry = setEntry(index, first);
-                node.addLastEntry(entry);
+                Tuple<K, V> first = right.removeLastTuple();
+                Tuple<K, V> tuple = setTuple(index, first);
+                node.addTuple(tuple);
                 
                 if (!node.isLeaf()) {
-                    node.addLastNodeId(right.removeFirstNodeId());
+                    node.addNodeId(right.removeFirstNodeId());
                 }
             
             // Neither sibling has enough Entries! Merge them!
             } else {
                 
                 if (left != null && !left.isEmpty()) {
-                    Entry<K, V> median = removeEntry(index-1);
+                    Tuple<K, V> median = removeTuple(index-1);
                     removeNodeId(index-1);
                     
                     node.mergeWithLeft(median, left);
@@ -376,7 +381,7 @@ public class Node<K, V> {
                     provider.free(left);
                 } else {
                     
-                    Entry<K, V> median = removeEntry(index);
+                    Tuple<K, V> median = removeTuple(index);
                     removeNodeId(index);
                     
                     node.mergeWithRight(median, right);
@@ -387,17 +392,17 @@ public class Node<K, V> {
         }
     }
     
-    private void mergeWithRight(Entry<K, V> median, Node<K, V> right) {
-        entries.addLast(median);
-        entries.addAll(right.entries);
+    private void mergeWithRight(Tuple<K, V> median, Node<K, V> right) {
+        tuples.addLast(median);
+        tuples.addAll(right.tuples);
         if (!isLeaf()) {
             nodes.addAll(right.nodes);
         }
     }
     
-    private void mergeWithLeft(Entry<K, V> median, Node<K, V> left) {
-        entries.addFirst(median);
-        entries.addAll(0, left.entries);
+    private void mergeWithLeft(Tuple<K, V> median, Node<K, V> left) {
+        tuples.addFirst(median);
+        tuples.addAll(0, left.tuples);
         if (!isLeaf()) {
             nodes.addAll(0, left.nodes);
         }
@@ -407,23 +412,23 @@ public class Node<K, V> {
         
         boolean leaf = isLeaf();
         
-        int entryCount = getEntryCount();
-        int m = entryCount/2;
+        int tupleCount = getTupleCount();
+        int m = tupleCount/2;
         
         Node<K, V> dst = provider.allocate(leaf);
         
-        Entry<K, V> median = removeEntry(m);
+        Tuple<K, V> median = removeTuple(m);
         
         if (!leaf) {
-            NodeId nodeId = removeNodeId(m+1);
-            dst.addLastNodeId(nodeId);
+            Node.Id nodeId = removeNodeId(m+1);
+            dst.addNodeId(nodeId);
         }
         
-        while (m < getEntryCount()) {
-            dst.addLastEntry(removeEntry(m));
+        while (m < getTupleCount()) {
+            dst.addTuple(removeTuple(m));
             
             if (!leaf) {
-                dst.addLastNodeId(removeNodeId(m+1));
+                dst.addNodeId(removeNodeId(m+1));
             }
         }
         
@@ -434,7 +439,7 @@ public class Node<K, V> {
         boolean leaf = isLeaf();
         Node<K, V> dst = provider.allocate(leaf);
         
-        dst.entries.addAll(entries);
+        dst.tuples.addAll(tuples);
         
         if (!leaf) {
             dst.nodes.addAll(nodes);
@@ -493,7 +498,7 @@ public class Node<K, V> {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(entries);
+        sb.append(tuples);
         
         if (nodes != null) {
             sb.append(nodes);
@@ -504,32 +509,39 @@ public class Node<K, V> {
         return sb.toString();
     }
     
+    private static Bucket<Node.Id> createBucket(boolean leaf, int maxSize) {
+        if (!leaf) {
+            return new Bucket<Node.Id>(maxSize);
+        }
+        return null;
+    }
+    
     public static class Median<K, V> {
         
-        private final Entry<K, V> entry;
+        private final Tuple<K, V> tuple;
         
-        private final NodeId nodeId;
+        private final Node.Id nodeId;
         
-        private Median(Entry<K, V> entry, NodeId nodeId) {
-            this.entry = entry;
+        private Median(Tuple<K, V> tuple, Node.Id nodeId) {
+            this.tuple = tuple;
             this.nodeId = nodeId;
         }
 
         public K getKey() {
-            return entry.getKey();
+            return tuple.getKey();
         }
         
-        public Entry<K, V> getEntry() {
-            return entry;
+        public Tuple<K, V> getTuple() {
+            return tuple;
         }
 
-        public NodeId getNodeId() {
+        public Node.Id getNodeId() {
             return nodeId;
         }
         
         @Override
         public String toString() {
-            return "<" + entry + ", " + nodeId + ">";
+            return "<" + tuple + ", " + nodeId + ">";
         }
     }
     
@@ -543,7 +555,7 @@ public class Node<K, V> {
         
         private Node<K, V> node = null;
         
-        private Entry<K, V> next = null;
+        private Tuple<K, V> next = null;
         
         public NodeIterator(NodeProvider<K, V> provider, Deque<Index> stack) {
             this.provider = provider;
@@ -557,7 +569,7 @@ public class Node<K, V> {
             }
         }
         
-        private Entry<K, V> nextEntry() {
+        private Tuple<K, V> nextEntry() {
             
             if (index.hasNext(node)) {
                 return index.next(node);
@@ -569,7 +581,7 @@ public class Node<K, V> {
                 assert (!node.isLeaf());
                 
                 if (index.hasNext(node)) {
-                    Entry<K, V> next = index.next(node);
+                    Tuple<K, V> next = index.next(node);
                     
                     index = Node.walk(provider, node, index, stack);
                     node = provider.get(index.getNodeId(), Intent.READ);
@@ -590,7 +602,7 @@ public class Node<K, V> {
         }
         
         @Override
-        public Entry<K, V> next() {
+        public Tuple<K, V> next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
@@ -610,25 +622,25 @@ public class Node<K, V> {
     
     private static class Index {
         
-        private final NodeId nodeId;
+        private final Node.Id nodeId;
         
         private int index;
         
-        public Index(NodeId nodeId, int index) {
+        public Index(Node.Id nodeId, int index) {
             this.nodeId = nodeId;
             this.index = index;
         }
         
-        public NodeId getNodeId() {
+        public Node.Id getNodeId() {
             return nodeId;
         }
         
         public boolean hasNext(Node<?, ?> node) {
-            return index < node.getEntryCount();
+            return index < node.getTupleCount();
         }
         
-        public <K, V> Entry<K, V> next(Node<K, V> node) {
-            return node.getEntry(index++);
+        public <K, V> Tuple<K, V> next(Node<K, V> node) {
+            return node.getTuple(index++);
         }
         
         public int get() {

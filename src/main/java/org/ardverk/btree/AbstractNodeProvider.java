@@ -21,7 +21,7 @@ import java.util.Comparator;
 public abstract class AbstractNodeProvider<K, V> 
         implements NodeProvider<K, V>{ 
 
-    public static final int T = 2;
+    public static final int T = 1;
     
     protected final Comparator<? super K> comparator;
     
