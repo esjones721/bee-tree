@@ -33,8 +33,9 @@ import java.util.Map.Entry;
 
 import org.ardverk.btree.AbstractBeeTree;
 import org.ardverk.btree.Bucket;
-import org.ardverk.btree.INode.Median;
 import org.ardverk.btree.Node;
+import org.ardverk.btree.Node.Median;
+import org.ardverk.btree.NodeId;
 import org.ardverk.btree.NodeProvider;
 import org.ardverk.btree.NodeProvider.Intent;
 import org.ardverk.btree.Tuple;
@@ -92,7 +93,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
             out = new DataOutputStream(
                     new BufferedOutputStream(
                         new FileOutputStream(file)));
-            ((StringId)root.getNodeId()).writeTo(out);
+            ((StringId)root.getId()).writeTo(out);
         } finally {
             IoUtils.close(out);
         }
@@ -114,7 +115,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                 int height = root.getHeight() + 1;
                 Node<byte[], byte[]> tmp = provider.allocate(height);
                 
-                tmp.addFirstNodeId(root.getNodeId());
+                tmp.addFirstChild(root.getId());
                 tmp.addMedian(median);
                 
                 root = tmp;
@@ -210,14 +211,14 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
     
     private class FileSystemProvider implements NodeProvider<byte[], byte[]> {
         
-        private final Map<Node.Id, Node<byte[], byte[]>> nodes 
-                = new LinkedHashMap<Node.Id, Node<byte[], byte[]>>() {
+        private final Map<NodeId, Node<byte[], byte[]>> nodes 
+                = new LinkedHashMap<NodeId, Node<byte[], byte[]>>() {
             
             private static final long serialVersionUID = 9040401273752081840L;
         
             @Override
             protected boolean removeEldestEntry(
-                    Map.Entry<Node.Id, Node<byte[], byte[]>> eldest) {
+                    Map.Entry<NodeId, Node<byte[], byte[]>> eldest) {
                 
                 Node<byte[], byte[]> node = eldest.getValue();
                 
@@ -254,12 +255,12 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
 
         @Override
         public void free(Node<? extends byte[], ? extends byte[]> node) {
-            nodes.remove(node.getNodeId());
+            nodes.remove(node.getId());
             deleteNode(node);
         }
 
         @Override
-        public Node<byte[], byte[]> get(Node.Id nodeId, Intent intent) {
+        public Node<byte[], byte[]> get(NodeId nodeId, Intent intent) {
             Node<byte[], byte[]> node = nodes.get(nodeId);
             if (node == null) {
                 node = load(nodeId);
@@ -291,7 +292,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
             return load(nodeId);
         }
         
-        private Node<byte[], byte[]> load(Node.Id nodeId) {
+        private Node<byte[], byte[]> load(NodeId nodeId) {
             File file = new File(directory, nodeId.toString());
             
             Node<byte[], byte[]> node = null;
@@ -316,10 +317,10 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                         tuples.add(new Tuple<byte[], byte[]>(key, value));
                     }
                     
-                    Bucket<Node.Id> nodes = null;
+                    Bucket<NodeId> nodes = null;
                     
                     if (0 < height) {
-                        nodes = new Bucket<Node.Id>(2*t);
+                        nodes = new Bucket<NodeId>(2*t);
 
                         int nodeCount = in.readInt();
                         for (int i = 0; i < nodeCount; i++) {
@@ -341,7 +342,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
         }
         
         private void store(Node<byte[], byte[]> node) {
-            Node.Id nodeId = node.getNodeId();
+            NodeId nodeId = node.getId();
             File file = new File(directory, nodeId.toString());
             
             synchronized (lock) {
@@ -363,10 +364,10 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                     }
                     
                     if (0 < height) {
-                        int nodeCount = node.getNodeCount();
+                        int nodeCount = node.getChildCount();
                         out.writeInt(nodeCount);
                         for (int i = 0; i < nodeCount; i++) {
-                            Node.Id childId = node.getNodeId(i);
+                            NodeId childId = node.getChild(i);
                             ((StringId)childId).writeTo(out);
                         }
                     }
@@ -380,7 +381,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
         }
         
         private void deleteNode(Node<?, ?> node) {
-            Node.Id nodeId = node.getNodeId();
+            NodeId nodeId = node.getId();
             File file = new File(directory, nodeId.toString());
             file.delete();
         }

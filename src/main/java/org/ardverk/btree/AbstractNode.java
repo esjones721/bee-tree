@@ -1,6 +1,6 @@
 package org.ardverk.btree;
 
-abstract class AbstractNode<K, V> {
+abstract class AbstractNode<K, V> implements NodeId {
 
     protected final NodeId nodeId;
     
@@ -14,7 +14,8 @@ abstract class AbstractNode<K, V> {
         this.t = t;
     }
     
-    public NodeId getNodeId() {
+    @Override
+    public NodeId getId() {
         return nodeId;
     }
 
@@ -40,37 +41,5 @@ abstract class AbstractNode<K, V> {
     
     public abstract int getTupleCount();
     
-    public abstract int getNodeCount();
-    
-    /**
-     * 
-     */
-    public static class Median<K, V> {
-        
-        private final Tuple<K, V> tuple;
-        
-        private final NodeId nodeId;
-        
-        Median(Tuple<K, V> tuple, NodeId nodeId) {
-            this.tuple = tuple;
-            this.nodeId = nodeId;
-        }
-
-        public K getKey() {
-            return tuple.getKey();
-        }
-        
-        public Tuple<K, V> getTuple() {
-            return tuple;
-        }
-
-        public NodeId getNodeId() {
-            return nodeId;
-        }
-        
-        @Override
-        public String toString() {
-            return "<" + tuple + ", " + nodeId + ">";
-        }
-    }
+    public abstract int getChildCount();
 }

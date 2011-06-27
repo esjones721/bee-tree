@@ -54,6 +54,11 @@ public class StringId implements NodeId, CharSequence {
     }
     
     @Override
+    public NodeId getId() {
+        return this;
+    }
+    
+    @Override
     public int length() {
         return nodeId.length();
     }

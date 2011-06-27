@@ -28,7 +28,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
     
     private final Bucket<Tuple<K, V>> tuples;
     
-    private final Bucket<NodeId> nodes;
+    private final Bucket<NodeId> children;
     
     public Node(NodeId nodeId, int height, int t) {
         this(nodeId, height, t, new Bucket<Tuple<K, V>>(2*t-1), 
@@ -37,35 +37,35 @@ public class Node<K, V> extends AbstractNode<K, V> {
     
     public Node(NodeId nodeId, int height, int t, 
             Bucket<Tuple<K, V>> tuples, 
-            Bucket<NodeId> nodes) {
+            Bucket<NodeId> children) {
         super(nodeId, height, t);
         
         this.tuples = tuples;
         
         if (height == 0) {
-            nodes = null;
+            children = null;
         }
         
-        this.nodes = nodes;
+        this.children = children;
         
         assert (tuples.getMaxSize() == 2*t-1);
-        assert (nodes == null || nodes.getMaxSize() == 2*t);
+        assert (children == null || children.getMaxSize() == 2*t);
     }
     
     public Bucket<Tuple<K, V>> getTuples() {
         return tuples;
     }
     
-    public Bucket<NodeId> getNodeIds() {
-        return nodes;
-    }
-    
-    public int getNodeCount() {
-        return nodes != null ? nodes.size() : 0;
+    public Bucket<NodeId> getChildren() {
+        return children;
     }
     
     public int getTupleCount() {
         return tuples.size();
+    }
+    
+    public int getChildCount() {
+        return children != null ? children.size() : 0;
     }
     
     public Tuple<K, V> getTuple(int index) {
@@ -88,28 +88,28 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return tuples.removeLast();
     }
     
-    public NodeId getNodeId(int index) {
-        return nodes.get(index);
+    public NodeId getChild(int index) {
+        return children.get(index);
     }
     
-    private NodeId removeNodeId(int index) {
-        return nodes.remove(index);
+    private NodeId removeChild(int index) {
+        return children.remove(index);
     }
     
-    private NodeId firstNodeId() {
-        return nodes.getFirst();
+    private NodeId firstChild() {
+        return children.getFirst();
     }
     
-    private NodeId removeFirstNodeId() {
-        return nodes.removeFirst();
+    private NodeId removeFirstChild() {
+        return children.removeFirst();
     }
     
-    private NodeId lastNodeId() {
-        return nodes.getLast();
+    private NodeId lastChild() {
+        return children.getLast();
     }
     
-    private NodeId removeLastNodeId() {
-        return nodes.removeLast();
+    private NodeId removeLastChild() {
+        return children.removeLast();
     }
     
     /**
@@ -151,18 +151,18 @@ public class Node<K, V> extends AbstractNode<K, V> {
     }
     
     public Node<K, V> firstChildNode(NodeProvider<K, V> provider, Intent intent) {
-        NodeId first = firstNodeId();
+        NodeId first = firstChild();
         return provider.get(first, intent);
     }
     
     public Node<K, V> lastChildNode(NodeProvider<K, V> provider, Intent intent) {
-        NodeId last = lastNodeId();
+        NodeId last = lastChild();
         return provider.get(last, intent);
     }
     
     private Node<K, V> getNode(NodeProvider<K, V> provider, 
             int index, Intent intent) {
-        NodeId nodeId = getNodeId(index);
+        NodeId nodeId = getChild(index);
         return (Node<K, V>)provider.get(nodeId, intent);
     }
     
@@ -182,16 +182,16 @@ public class Node<K, V> extends AbstractNode<K, V> {
         tuples.add(index, tuple);
     }
     
-    public void addNodeId(NodeId nodeId) {
-        nodes.addLast(nodeId);
+    public void addChild(NodeId nodeId) {
+        children.addLast(nodeId);
     }
     
-    public void addFirstNodeId(NodeId nodeId) {
-        nodes.addFirst(nodeId);
+    public void addFirstChild(NodeId nodeId) {
+        children.addFirst(nodeId);
     }
     
-    private void addNodeId(int index, NodeId nodeId) {
-        nodes.add(index, nodeId);
+    private void addChild(int index, NodeId nodeId) {
+        children.add(index, nodeId);
     }
     
     public void addMedian(Median<K, V> median) {
@@ -200,7 +200,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
     
     private void addMedian(int index, Median<K, V> median) {
         addTuple(index, median.getTuple());
-        addNodeId(index+1, median.getNodeId());
+        addChild(index+1, median.getChild());
     }
     
     private int binarySearch(NodeProvider<K, V> provider, K key) {
@@ -324,7 +324,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
             } else {
                 
                 Tuple<K, V> median = removeTuple(index);
-                removeNodeId(index+1);
+                removeChild(index+1);
                 
                 left.mergeWithRight(median, right);
                 
@@ -351,12 +351,12 @@ public class Node<K, V> extends AbstractNode<K, V> {
             node.addFirstTuple(tuple);
             
             if (!node.isLeaf()) {
-                node.addFirstNodeId(left.removeLastNodeId());
+                node.addFirstChild(left.removeLastChild());
             }
         } else {
             
             Node<K, V> right = null;
-            if (index < getNodeCount()-1) {
+            if (index < getChildCount()-1) {
                 right = getNode(provider, index+1, Intent.WRITE);
             }
             
@@ -367,7 +367,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
                 node.addTuple(tuple);
                 
                 if (!node.isLeaf()) {
-                    node.addNodeId(right.removeFirstNodeId());
+                    node.addChild(right.removeFirstChild());
                 }
             
             // Neither sibling has enough Entries! Merge them!
@@ -375,7 +375,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
                 
                 if (left != null && !left.isEmpty()) {
                     Tuple<K, V> median = removeTuple(index-1);
-                    removeNodeId(index-1);
+                    removeChild(index-1);
                     
                     node.mergeWithLeft(median, left);
                     
@@ -383,7 +383,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
                 } else {
                     
                     Tuple<K, V> median = removeTuple(index);
-                    removeNodeId(index);
+                    removeChild(index);
                     
                     node.mergeWithRight(median, right);
                     
@@ -397,7 +397,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         tuples.addLast(median);
         tuples.addAll(right.tuples);
         if (!isLeaf()) {
-            nodes.addAll(right.nodes);
+            children.addAll(right.children);
         }
     }
     
@@ -405,7 +405,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         tuples.addFirst(median);
         tuples.addAll(0, left.tuples);
         if (!isLeaf()) {
-            nodes.addAll(0, left.nodes);
+            children.addAll(0, left.children);
         }
     }
     
@@ -421,19 +421,19 @@ public class Node<K, V> extends AbstractNode<K, V> {
         Tuple<K, V> median = removeTuple(m);
         
         if (!leaf) {
-            NodeId nodeId = removeNodeId(m+1);
-            dst.addNodeId(nodeId);
+            NodeId nodeId = removeChild(m+1);
+            dst.addChild(nodeId);
         }
         
         while (m < getTupleCount()) {
             dst.addTuple(removeTuple(m));
             
             if (!leaf) {
-                dst.addNodeId(removeNodeId(m+1));
+                dst.addChild(removeChild(m+1));
             }
         }
         
-        return new Median<K, V>(median, dst.getNodeId());
+        return new Median<K, V>(median, dst.getId());
     }
     
     public Node<K, V> copy(NodeProvider<K, V> provider) {
@@ -443,7 +443,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         dst.tuples.addAll(tuples);
         
         if (!leaf) {
-            dst.nodes.addAll(nodes);
+            dst.children.addAll(children);
         }
         
         return dst;
@@ -452,7 +452,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
     public Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider) {
         Deque<Index> stack = new ArrayDeque<Index>();
         
-        stack.push(new Index(getNodeId(), 0));
+        stack.push(new Index(getId(), 0));
         walk(provider, this, stack.peek(), stack);
         
         return new NodeIterator<K, V>(provider, stack);
@@ -469,7 +469,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         int index = binarySearch(provider, key);
         
         int path = (index < 0 ? -index - 1 : index);
-        stack.push(new Index(getNodeId(), path));
+        stack.push(new Index(getId(), path));
         
         if (index >= 0 || isLeaf()) {
             
@@ -489,7 +489,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         
         while (!node.isLeaf()) {
             node = node.getNode(provider, index.get(), Intent.READ);
-            index = new Index(node.getNodeId(), 0);
+            index = new Index(node.getId(), 0);
             stack.push(index);
         }
         
@@ -501,8 +501,8 @@ public class Node<K, V> extends AbstractNode<K, V> {
         StringBuilder sb = new StringBuilder();
         sb.append(tuples);
         
-        if (nodes != null) {
-            sb.append(nodes);
+        if (children != null) {
+            sb.append(children);
         } else {
             sb.append("[]");
         }
@@ -515,6 +515,38 @@ public class Node<K, V> extends AbstractNode<K, V> {
             return new Bucket<NodeId>(maxSize);
         }
         return null;
+    }
+    
+    /**
+     * 
+     */
+    public static class Median<K, V> {
+        
+        private final Tuple<K, V> tuple;
+        
+        private final NodeId nodeId;
+        
+        private Median(Tuple<K, V> tuple, NodeId nodeId) {
+            this.tuple = tuple;
+            this.nodeId = nodeId;
+        }
+
+        public K getKey() {
+            return tuple.getKey();
+        }
+        
+        public Tuple<K, V> getTuple() {
+            return tuple;
+        }
+
+        public NodeId getChild() {
+            return nodeId;
+        }
+        
+        @Override
+        public String toString() {
+            return "<" + tuple + ", " + nodeId + ">";
+        }
     }
     
     private static class NodeIterator<K, V> implements Iterator<Tuple<K, V>> {

@@ -51,7 +51,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
                 
                 Node<K, V> tmp = provider.allocate(false);
                 
-                tmp.addFirstNodeId(root.getNodeId());
+                tmp.addFirstChild(root.getId());
                 tmp.addMedian(median);
                 
                 root = tmp;
