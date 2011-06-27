@@ -24,38 +24,23 @@ import java.util.NoSuchElementException;
 
 import org.ardverk.btree.NodeProvider.Intent;
 
-public class Node<K, V> {
-    
-    /**
-     * 
-     */
-    public static interface Id {
-        
-    }
-    
-    private final Node.Id nodeId;
-    
-    private final int height;
-    
-    private final int t;
+public class Node<K, V> extends AbstractNode<K, V> {
     
     private final Bucket<Tuple<K, V>> tuples;
     
-    private final Bucket<Node.Id> nodes;
+    private final Bucket<INode.Id> nodes;
     
-    public Node(Node.Id nodeId, int height, int t) {
+    public Node(INode.Id nodeId, int height, int t) {
         this(nodeId, height, t, new Bucket<Tuple<K, V>>(2*t-1), 
                 createBucket(height, 2*t));
     }
     
-    public Node(Node.Id nodeId, int height, int t, 
-            Bucket<Tuple<K, V>> entries, 
-            Bucket<Node.Id> nodes) {
+    public Node(INode.Id nodeId, int height, int t, 
+            Bucket<Tuple<K, V>> tuples, 
+            Bucket<INode.Id> nodes) {
+        super(nodeId, height, t);
         
-        this.nodeId = nodeId;
-        this.height = height;
-        this.t = t;
-        this.tuples = entries;
+        this.tuples = tuples;
         
         if (height == 0) {
             nodes = null;
@@ -63,23 +48,15 @@ public class Node<K, V> {
         
         this.nodes = nodes;
         
-        assert (entries.getMaxSize() == 2*t-1);
+        assert (tuples.getMaxSize() == 2*t-1);
         assert (nodes == null || nodes.getMaxSize() == 2*t);
-    }
-    
-    public Node.Id getNodeId() {
-        return nodeId;
-    }
-    
-    public int getHeight() {
-        return height;
     }
     
     public Bucket<Tuple<K, V>> getTuples() {
         return tuples;
     }
     
-    public Bucket<Node.Id> getNodeIds() {
+    public Bucket<INode.Id> getNodeIds() {
         return nodes;
     }
     
@@ -91,22 +68,6 @@ public class Node<K, V> {
         return tuples.size();
     }
     
-    public boolean isEmpty() {
-        return tuples.isEmpty();
-    }
-    
-    public boolean isOverflow() {
-        return tuples.isOverflow();
-    }
-    
-    public boolean isUnderflow() {
-        return tuples.size() < t;
-    }
-    
-    public boolean isLeaf() {
-        return height == 0;
-    }
-    
     public Tuple<K, V> getTuple(int index) {
         return tuples.get(index);
     }
@@ -115,11 +76,13 @@ public class Node<K, V> {
         return tuples.remove(index);
     }
     
-    private Tuple<K, V> firstTuple() {
+    @Override
+    public Tuple<K, V> firstTuple() {
         return tuples.getFirst();
     }
     
-    private Tuple<K, V> lastTuple() {
+    @Override
+    public Tuple<K, V> lastTuple() {
         return tuples.getLast();
     }
     
@@ -127,62 +90,46 @@ public class Node<K, V> {
         return tuples.removeLast();
     }
     
-    public Node.Id getNodeId(int index) {
+    public INode.Id getNodeId(int index) {
         return nodes.get(index);
     }
     
-    private Node.Id removeNodeId(int index) {
+    private INode.Id removeNodeId(int index) {
         return nodes.remove(index);
     }
     
-    private Node.Id firstNodeId() {
+    private INode.Id firstNodeId() {
         return nodes.getFirst();
     }
     
-    private Node.Id removeFirstNodeId() {
+    private INode.Id removeFirstNodeId() {
         return nodes.removeFirst();
     }
     
-    private Node.Id lastNodeId() {
+    private INode.Id lastNodeId() {
         return nodes.getLast();
     }
     
-    private Node.Id removeLastNodeId() {
+    private INode.Id removeLastNodeId() {
         return nodes.removeLast();
     }
     
-    public Tuple<K, V> firstTuple(NodeProvider<K, V> provider, Intent intent) {
-        Node<K, V> node = this;
-        while (!node.isLeaf()) {
-            node = node.firstNode(provider, intent);
-        }
-        
-        return node.firstTuple();
-    }
-    
-    public Tuple<K, V> lastTuple(NodeProvider<K, V> provider, Intent intent) {
-        Node<K, V> node = this;
-        while (!node.isLeaf()) {
-            node = node.lastNode(provider, intent);
-        }
-        
-        return node.lastTuple();
-    }
-    
-    public Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
-        Node.Id first = firstNodeId();
+    @Override
+    public INode<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
+        INode.Id first = firstNodeId();
         return provider.get(first, intent);
     }
     
-    private Node<K, V> lastNode(NodeProvider<K, V> provider, Intent intent) {
-        Node.Id last = lastNodeId();
+    @Override
+    public INode<K, V> lastNode(NodeProvider<K, V> provider, Intent intent) {
+        INode.Id last = lastNodeId();
         return provider.get(last, intent);
     }
     
     private Node<K, V> getNode(NodeProvider<K, V> provider, 
             int index, Intent intent) {
-        Node.Id nodeId = getNodeId(index);
-        return provider.get(nodeId, intent);
+        INode.Id nodeId = getNodeId(index);
+        return (Node<K, V>)provider.get(nodeId, intent);
     }
     
     private Tuple<K, V> setTuple(int index, Tuple<K, V> tuple) {
@@ -201,15 +148,15 @@ public class Node<K, V> {
         tuples.add(index, tuple);
     }
     
-    public void addNodeId(Node.Id nodeId) {
+    public void addNodeId(INode.Id nodeId) {
         nodes.addLast(nodeId);
     }
     
-    public void addFirstNodeId(Node.Id nodeId) {
+    public void addFirstNodeId(INode.Id nodeId) {
         nodes.addFirst(nodeId);
     }
     
-    private void addNodeId(int index, Node.Id nodeId) {
+    private void addNodeId(int index, INode.Id nodeId) {
         nodes.add(index, nodeId);
     }
     
@@ -227,6 +174,7 @@ public class Node<K, V> {
         return TupleUtils.binarySearch(tuples, key, comparator);
     }
     
+    @Override
     public Tuple<K, V> ceilingTuple(NodeProvider<K, V> provider, K key) {
         int index = binarySearch(provider, key);
         
@@ -238,10 +186,11 @@ public class Node<K, V> {
             return getTuple(index);
         }
         
-        Node<K, V> node = getNode(provider, -index - 1, Intent.READ);
+        INode<K, V> node = getNode(provider, -index - 1, Intent.READ);
         return node.ceilingTuple(provider, key);
     }
     
+    @Override
     public Tuple<K, V> get(NodeProvider<K, V> provider, K key) {
         int index = binarySearch(provider, key);
         
@@ -252,12 +201,13 @@ public class Node<K, V> {
         
         // I didn't find it but I know where to look for it!
         if (!isLeaf()) {
-            Node<K, V> node = getNode(provider, -index - 1, Intent.READ);
+            INode<K, V> node = getNode(provider, -index - 1, Intent.READ);
             return node.get(provider, key);
         }
         return null;
     }
     
+    @Override
     public Tuple<K, V> put(NodeProvider<K, V> provider, K key, V value) {
         int index = binarySearch(provider, key);
         
@@ -277,7 +227,7 @@ public class Node<K, V> {
         }
         
         // Keep looking!
-        Node<K, V> node = getNode(provider, index, Intent.WRITE);
+        INode<K, V> node = getNode(provider, index, Intent.WRITE);
         
         if (node.isOverflow()) {
             
@@ -294,6 +244,7 @@ public class Node<K, V> {
         return node.put(provider, key, value);
     }
     
+    @Override
     public Tuple<K, V> remove(NodeProvider<K, V> provider, K key) {
         
         int index = binarySearch(provider, key);
@@ -315,7 +266,7 @@ public class Node<K, V> {
         assert (index < 0);
         index = -index - 1;
         
-        Node<K, V> node = getNode(provider, index, Intent.WRITE);
+        INode<K, V> node = getNode(provider, index, Intent.WRITE);
         
         if (node.isUnderflow()) {
             fix(provider, node, index);
@@ -327,7 +278,7 @@ public class Node<K, V> {
     private Tuple<K, V> removeInternal(NodeProvider<K, V> provider, K key, int index) {
         Tuple<K, V> tuple = null;
         
-        Node<K, V> left = getNode(provider, index, Intent.WRITE);
+        INode<K, V> left = getNode(provider, index, Intent.WRITE);
         if (!left.isUnderflow()) {
             Tuple<K, V> last = left.lastTuple(provider, Intent.WRITE);
             tuple = setTuple(index, last);
@@ -335,7 +286,7 @@ public class Node<K, V> {
             
         } else {
             
-            Node<K, V> right = getNode(provider, index+1, Intent.WRITE);
+            INode<K, V> right = getNode(provider, index+1, Intent.WRITE);
             if (!right.isUnderflow()) {
                 Tuple<K, V> first = right.firstTuple(provider, Intent.WRITE);
                 tuple = setTuple(index, first);
@@ -356,9 +307,9 @@ public class Node<K, V> {
         return tuple;
     }
     
-    private void fix(NodeProvider<K, V> provider, Node<K, V> node, int index) {
+    private void fix(NodeProvider<K, V> provider, INode<K, V> node, int index) {
         
-        Node<K, V> left = null;
+        INode<K, V> left = null;
         if (0 < index) {
             left = getNode(provider, index-1, Intent.WRITE);
         }
@@ -374,7 +325,7 @@ public class Node<K, V> {
             }
         } else {
             
-            Node<K, V> right = null;
+            INode<K, V> right = null;
             if (index < getNodeCount()-1) {
                 right = getNode(provider, index+1, Intent.WRITE);
             }
@@ -412,7 +363,7 @@ public class Node<K, V> {
         }
     }
     
-    private void mergeWithRight(Tuple<K, V> median, Node<K, V> right) {
+    private void mergeWithRight(Tuple<K, V> median, INode<K, V> right) {
         tuples.addLast(median);
         tuples.addAll(right.tuples);
         if (!isLeaf()) {
@@ -420,7 +371,7 @@ public class Node<K, V> {
         }
     }
     
-    private void mergeWithLeft(Tuple<K, V> median, Node<K, V> left) {
+    private void mergeWithLeft(Tuple<K, V> median, INode<K, V> left) {
         tuples.addFirst(median);
         tuples.addAll(0, left.tuples);
         if (!isLeaf()) {
@@ -428,6 +379,7 @@ public class Node<K, V> {
         }
     }
     
+    @Override
     public Median<K, V> split(NodeProvider<K, V> provider) {
         
         boolean leaf = isLeaf();
@@ -435,12 +387,12 @@ public class Node<K, V> {
         int tupleCount = getTupleCount();
         int m = tupleCount/2;
         
-        Node<K, V> dst = provider.allocate(height);
+        INode<K, V> dst = provider.allocate(height);
         
         Tuple<K, V> median = removeTuple(m);
         
         if (!leaf) {
-            Node.Id nodeId = removeNodeId(m+1);
+            INode.Id nodeId = removeNodeId(m+1);
             dst.addNodeId(nodeId);
         }
         
@@ -457,7 +409,7 @@ public class Node<K, V> {
     
     public Node<K, V> copy(NodeProvider<K, V> provider) {
         boolean leaf = isLeaf();
-        Node<K, V> dst = provider.allocate(height);
+        INode<K, V> dst = provider.allocate(height);
         
         dst.tuples.addAll(tuples);
         
@@ -468,6 +420,7 @@ public class Node<K, V> {
         return dst;
     }
     
+    @Override
     public Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider) {
         Deque<Index> stack = new ArrayDeque<Index>();
         
@@ -477,6 +430,7 @@ public class Node<K, V> {
         return new NodeIterator<K, V>(provider, stack);
     }
     
+    @Override
     public Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider, 
             K key, boolean inclusive) {
         return iterator(provider, key, inclusive, new ArrayDeque<Index>());
@@ -529,40 +483,11 @@ public class Node<K, V> {
         return sb.toString();
     }
     
-    private static Bucket<Node.Id> createBucket(int height, int maxSize) {
+    private static Bucket<INode.Id> createBucket(int height, int maxSize) {
         if (0 < height) {
-            return new Bucket<Node.Id>(maxSize);
+            return new Bucket<INode.Id>(maxSize);
         }
         return null;
-    }
-    
-    public static class Median<K, V> {
-        
-        private final Tuple<K, V> tuple;
-        
-        private final Node.Id nodeId;
-        
-        private Median(Tuple<K, V> tuple, Node.Id nodeId) {
-            this.tuple = tuple;
-            this.nodeId = nodeId;
-        }
-
-        public K getKey() {
-            return tuple.getKey();
-        }
-        
-        public Tuple<K, V> getTuple() {
-            return tuple;
-        }
-
-        public Node.Id getNodeId() {
-            return nodeId;
-        }
-        
-        @Override
-        public String toString() {
-            return "<" + tuple + ", " + nodeId + ">";
-        }
     }
     
     private static class NodeIterator<K, V> implements Iterator<Tuple<K, V>> {
@@ -583,7 +508,7 @@ public class Node<K, V> {
             
             if (!stack.isEmpty()) {
                 index = stack.poll();
-                node = provider.get(index.getNodeId(), Intent.READ);
+                node = (Node<K, V>)provider.get(index.getNodeId(), Intent.READ);
                 
                 next = nextEntry();
             }
@@ -597,14 +522,14 @@ public class Node<K, V> {
             
             if (!stack.isEmpty()) {
                 index = stack.peek();
-                node = provider.get(index.getNodeId(), Intent.READ);
+                node = (Node<K, V>)provider.get(index.getNodeId(), Intent.READ);
                 assert (!node.isLeaf());
                 
                 if (index.hasNext(node)) {
                     Tuple<K, V> next = index.next(node);
                     
                     index = Node.walk(provider, node, index, stack);
-                    node = provider.get(index.getNodeId(), Intent.READ);
+                    node = (Node<K, V>)provider.get(index.getNodeId(), Intent.READ);
                     
                     return next;
                 }
@@ -642,20 +567,20 @@ public class Node<K, V> {
     
     private static class Index {
         
-        private final Node.Id nodeId;
+        private final INode.Id nodeId;
         
         private int index;
         
-        public Index(Node.Id nodeId, int index) {
+        private Index(INode.Id nodeId, int index) {
             this.nodeId = nodeId;
             this.index = index;
         }
         
-        public Node.Id getNodeId() {
+        public INode.Id getNodeId() {
             return nodeId;
         }
         
-        public boolean hasNext(Node<?, ?> node) {
+        public boolean hasNext(INode<?, ?> node) {
             return index < node.getTupleCount();
         }
         

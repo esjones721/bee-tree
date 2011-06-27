@@ -33,8 +33,8 @@ import java.util.Map.Entry;
 
 import org.ardverk.btree.AbstractBeeTree;
 import org.ardverk.btree.Bucket;
+import org.ardverk.btree.INode.Median;
 import org.ardverk.btree.Node;
-import org.ardverk.btree.Node.Median;
 import org.ardverk.btree.NodeProvider;
 import org.ardverk.btree.NodeProvider.Intent;
 import org.ardverk.btree.Tuple;
