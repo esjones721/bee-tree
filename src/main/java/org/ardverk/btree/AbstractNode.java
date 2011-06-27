@@ -1,68 +1,76 @@
 package org.ardverk.btree;
 
-import org.ardverk.btree.NodeProvider.Intent;
+abstract class AbstractNode<K, V> {
 
-public abstract class AbstractNode<K, V> implements INode<K, V> {
-
-    protected final INode.Id nodeId;
+    protected final NodeId nodeId;
     
     protected final int height;
     
     protected final int t;
     
-    public AbstractNode(INode.Id nodeId, int height, int t) {
+    public AbstractNode(NodeId nodeId, int height, int t) {
         this.nodeId = nodeId;
         this.height = height;
         this.t = t;
     }
     
-    @Override
-    public INode.Id getNodeId() {
+    public NodeId getNodeId() {
         return nodeId;
     }
 
-    @Override
     public int getHeight() {
         return height;
     }
 
-    @Override
     public boolean isEmpty() {
         return getTupleCount() == 0;
     }
 
-    @Override
     public boolean isOverflow() {
         return getTupleCount() >= 2*t-1;
     }
 
-    @Override
     public boolean isUnderflow() {
         return getTupleCount() < t;
     }
 
-    @Override
     public boolean isLeaf() {
         return getHeight() == 0;
     }
     
-    @Override
-    public Tuple<K, V> firstTuple(NodeProvider<K, V> provider, Intent intent) {
-        INode<K, V> node = this;
-        while (!node.isLeaf()) {
-            node = node.firstNode(provider, intent);
-        }
-        
-        return node.firstTuple();
-    }
+    public abstract int getTupleCount();
     
-    @Override
-    public Tuple<K, V> lastTuple(NodeProvider<K, V> provider, Intent intent) {
-        INode<K, V> node = this;
-        while (!node.isLeaf()) {
-            node = node.lastNode(provider, intent);
+    public abstract int getNodeCount();
+    
+    /**
+     * 
+     */
+    public static class Median<K, V> {
+        
+        private final Tuple<K, V> tuple;
+        
+        private final NodeId nodeId;
+        
+        Median(Tuple<K, V> tuple, NodeId nodeId) {
+            this.tuple = tuple;
+            this.nodeId = nodeId;
+        }
+
+        public K getKey() {
+            return tuple.getKey();
         }
         
-        return node.lastTuple();
+        public Tuple<K, V> getTuple() {
+            return tuple;
+        }
+
+        public NodeId getNodeId() {
+            return nodeId;
+        }
+        
+        @Override
+        public String toString() {
+            return "<" + tuple + ", " + nodeId + ">";
+        }
     }
 }

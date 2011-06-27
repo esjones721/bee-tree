@@ -70,7 +70,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
             tuple = root.remove(provider, key);
             
             if (!root.isLeaf() && root.isEmpty()) {
-                Node<K, V> tmp = root.firstNode(provider, Intent.READ);
+                Node<K, V> tmp = root.firstChildNode(provider, Intent.READ);
                 provider.free(root);
                 root = tmp;
             }

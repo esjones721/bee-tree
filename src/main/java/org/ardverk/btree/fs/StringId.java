@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Random;
 
-import org.ardverk.btree.Node;
+import org.ardverk.btree.NodeId;
 
-public class StringId implements Node.Id, CharSequence {
+public class StringId implements NodeId, CharSequence {
 
     private static final Random GENERATOR = new SecureRandom();
     

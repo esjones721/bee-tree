@@ -28,16 +28,16 @@ public class Node<K, V> extends AbstractNode<K, V> {
     
     private final Bucket<Tuple<K, V>> tuples;
     
-    private final Bucket<INode.Id> nodes;
+    private final Bucket<NodeId> nodes;
     
-    public Node(INode.Id nodeId, int height, int t) {
+    public Node(NodeId nodeId, int height, int t) {
         this(nodeId, height, t, new Bucket<Tuple<K, V>>(2*t-1), 
                 createBucket(height, 2*t));
     }
     
-    public Node(INode.Id nodeId, int height, int t, 
+    public Node(NodeId nodeId, int height, int t, 
             Bucket<Tuple<K, V>> tuples, 
-            Bucket<INode.Id> nodes) {
+            Bucket<NodeId> nodes) {
         super(nodeId, height, t);
         
         this.tuples = tuples;
@@ -56,7 +56,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return tuples;
     }
     
-    public Bucket<INode.Id> getNodeIds() {
+    public Bucket<NodeId> getNodeIds() {
         return nodes;
     }
     
@@ -76,12 +76,10 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return tuples.remove(index);
     }
     
-    @Override
     public Tuple<K, V> firstTuple() {
         return tuples.getFirst();
     }
     
-    @Override
     public Tuple<K, V> lastTuple() {
         return tuples.getLast();
     }
@@ -90,45 +88,81 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return tuples.removeLast();
     }
     
-    public INode.Id getNodeId(int index) {
+    public NodeId getNodeId(int index) {
         return nodes.get(index);
     }
     
-    private INode.Id removeNodeId(int index) {
+    private NodeId removeNodeId(int index) {
         return nodes.remove(index);
     }
     
-    private INode.Id firstNodeId() {
+    private NodeId firstNodeId() {
         return nodes.getFirst();
     }
     
-    private INode.Id removeFirstNodeId() {
+    private NodeId removeFirstNodeId() {
         return nodes.removeFirst();
     }
     
-    private INode.Id lastNodeId() {
+    private NodeId lastNodeId() {
         return nodes.getLast();
     }
     
-    private INode.Id removeLastNodeId() {
+    private NodeId removeLastNodeId() {
         return nodes.removeLast();
     }
     
-    @Override
-    public INode<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
-        INode.Id first = firstNodeId();
+    /**
+     * Walk all the way to the left and return the first {@link Tuple}.
+     */
+    public Tuple<K, V> firstTuple(NodeProvider<K, V> provider, Intent intent) {
+        return firstNode(provider, intent).firstTuple();
+    }
+    
+    /**
+     * Walk all the way to the right and return the last {@link Tuple}.
+     */
+    public Tuple<K, V> lastTuple(NodeProvider<K, V> provider, Intent intent) {
+        return lastNode(provider, intent).lastTuple();
+    }
+    
+    /**
+     * Walks all the way to the left.
+     */
+    public Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
+        Node<K, V> node = this;
+        while (!node.isLeaf()) {
+            node = node.firstChildNode(provider, intent);
+        }
+        
+        return node;
+    }
+    
+    /**
+     * Walks all the way to the right.
+     */
+    public Node<K, V> lastNode(NodeProvider<K, V> provider, Intent intent) {
+        Node<K, V> node = this;
+        while (!node.isLeaf()) {
+            node = node.lastChildNode(provider, intent);
+        }
+        
+        return node;
+    }
+    
+    public Node<K, V> firstChildNode(NodeProvider<K, V> provider, Intent intent) {
+        NodeId first = firstNodeId();
         return provider.get(first, intent);
     }
     
-    @Override
-    public INode<K, V> lastNode(NodeProvider<K, V> provider, Intent intent) {
-        INode.Id last = lastNodeId();
+    public Node<K, V> lastChildNode(NodeProvider<K, V> provider, Intent intent) {
+        NodeId last = lastNodeId();
         return provider.get(last, intent);
     }
     
     private Node<K, V> getNode(NodeProvider<K, V> provider, 
             int index, Intent intent) {
-        INode.Id nodeId = getNodeId(index);
+        NodeId nodeId = getNodeId(index);
         return (Node<K, V>)provider.get(nodeId, intent);
     }
     
@@ -148,15 +182,15 @@ public class Node<K, V> extends AbstractNode<K, V> {
         tuples.add(index, tuple);
     }
     
-    public void addNodeId(INode.Id nodeId) {
+    public void addNodeId(NodeId nodeId) {
         nodes.addLast(nodeId);
     }
     
-    public void addFirstNodeId(INode.Id nodeId) {
+    public void addFirstNodeId(NodeId nodeId) {
         nodes.addFirst(nodeId);
     }
     
-    private void addNodeId(int index, INode.Id nodeId) {
+    private void addNodeId(int index, NodeId nodeId) {
         nodes.add(index, nodeId);
     }
     
@@ -174,7 +208,6 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return TupleUtils.binarySearch(tuples, key, comparator);
     }
     
-    @Override
     public Tuple<K, V> ceilingTuple(NodeProvider<K, V> provider, K key) {
         int index = binarySearch(provider, key);
         
@@ -186,11 +219,10 @@ public class Node<K, V> extends AbstractNode<K, V> {
             return getTuple(index);
         }
         
-        INode<K, V> node = getNode(provider, -index - 1, Intent.READ);
+        Node<K, V> node = getNode(provider, -index - 1, Intent.READ);
         return node.ceilingTuple(provider, key);
     }
     
-    @Override
     public Tuple<K, V> get(NodeProvider<K, V> provider, K key) {
         int index = binarySearch(provider, key);
         
@@ -201,13 +233,12 @@ public class Node<K, V> extends AbstractNode<K, V> {
         
         // I didn't find it but I know where to look for it!
         if (!isLeaf()) {
-            INode<K, V> node = getNode(provider, -index - 1, Intent.READ);
+            Node<K, V> node = getNode(provider, -index - 1, Intent.READ);
             return node.get(provider, key);
         }
         return null;
     }
     
-    @Override
     public Tuple<K, V> put(NodeProvider<K, V> provider, K key, V value) {
         int index = binarySearch(provider, key);
         
@@ -227,7 +258,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         }
         
         // Keep looking!
-        INode<K, V> node = getNode(provider, index, Intent.WRITE);
+        Node<K, V> node = getNode(provider, index, Intent.WRITE);
         
         if (node.isOverflow()) {
             
@@ -244,7 +275,6 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return node.put(provider, key, value);
     }
     
-    @Override
     public Tuple<K, V> remove(NodeProvider<K, V> provider, K key) {
         
         int index = binarySearch(provider, key);
@@ -266,7 +296,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         assert (index < 0);
         index = -index - 1;
         
-        INode<K, V> node = getNode(provider, index, Intent.WRITE);
+        Node<K, V> node = getNode(provider, index, Intent.WRITE);
         
         if (node.isUnderflow()) {
             fix(provider, node, index);
@@ -278,7 +308,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
     private Tuple<K, V> removeInternal(NodeProvider<K, V> provider, K key, int index) {
         Tuple<K, V> tuple = null;
         
-        INode<K, V> left = getNode(provider, index, Intent.WRITE);
+        Node<K, V> left = getNode(provider, index, Intent.WRITE);
         if (!left.isUnderflow()) {
             Tuple<K, V> last = left.lastTuple(provider, Intent.WRITE);
             tuple = setTuple(index, last);
@@ -286,7 +316,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
             
         } else {
             
-            INode<K, V> right = getNode(provider, index+1, Intent.WRITE);
+            Node<K, V> right = getNode(provider, index+1, Intent.WRITE);
             if (!right.isUnderflow()) {
                 Tuple<K, V> first = right.firstTuple(provider, Intent.WRITE);
                 tuple = setTuple(index, first);
@@ -307,9 +337,9 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return tuple;
     }
     
-    private void fix(NodeProvider<K, V> provider, INode<K, V> node, int index) {
+    private void fix(NodeProvider<K, V> provider, Node<K, V> node, int index) {
         
-        INode<K, V> left = null;
+        Node<K, V> left = null;
         if (0 < index) {
             left = getNode(provider, index-1, Intent.WRITE);
         }
@@ -325,7 +355,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
             }
         } else {
             
-            INode<K, V> right = null;
+            Node<K, V> right = null;
             if (index < getNodeCount()-1) {
                 right = getNode(provider, index+1, Intent.WRITE);
             }
@@ -363,7 +393,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         }
     }
     
-    private void mergeWithRight(Tuple<K, V> median, INode<K, V> right) {
+    private void mergeWithRight(Tuple<K, V> median, Node<K, V> right) {
         tuples.addLast(median);
         tuples.addAll(right.tuples);
         if (!isLeaf()) {
@@ -371,7 +401,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         }
     }
     
-    private void mergeWithLeft(Tuple<K, V> median, INode<K, V> left) {
+    private void mergeWithLeft(Tuple<K, V> median, Node<K, V> left) {
         tuples.addFirst(median);
         tuples.addAll(0, left.tuples);
         if (!isLeaf()) {
@@ -379,7 +409,6 @@ public class Node<K, V> extends AbstractNode<K, V> {
         }
     }
     
-    @Override
     public Median<K, V> split(NodeProvider<K, V> provider) {
         
         boolean leaf = isLeaf();
@@ -387,12 +416,12 @@ public class Node<K, V> extends AbstractNode<K, V> {
         int tupleCount = getTupleCount();
         int m = tupleCount/2;
         
-        INode<K, V> dst = provider.allocate(height);
+        Node<K, V> dst = provider.allocate(height);
         
         Tuple<K, V> median = removeTuple(m);
         
         if (!leaf) {
-            INode.Id nodeId = removeNodeId(m+1);
+            NodeId nodeId = removeNodeId(m+1);
             dst.addNodeId(nodeId);
         }
         
@@ -409,7 +438,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
     
     public Node<K, V> copy(NodeProvider<K, V> provider) {
         boolean leaf = isLeaf();
-        INode<K, V> dst = provider.allocate(height);
+        Node<K, V> dst = provider.allocate(height);
         
         dst.tuples.addAll(tuples);
         
@@ -420,7 +449,6 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return dst;
     }
     
-    @Override
     public Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider) {
         Deque<Index> stack = new ArrayDeque<Index>();
         
@@ -430,7 +458,6 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return new NodeIterator<K, V>(provider, stack);
     }
     
-    @Override
     public Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider, 
             K key, boolean inclusive) {
         return iterator(provider, key, inclusive, new ArrayDeque<Index>());
@@ -483,9 +510,9 @@ public class Node<K, V> extends AbstractNode<K, V> {
         return sb.toString();
     }
     
-    private static Bucket<INode.Id> createBucket(int height, int maxSize) {
+    private static Bucket<NodeId> createBucket(int height, int maxSize) {
         if (0 < height) {
-            return new Bucket<INode.Id>(maxSize);
+            return new Bucket<NodeId>(maxSize);
         }
         return null;
     }
@@ -567,20 +594,20 @@ public class Node<K, V> extends AbstractNode<K, V> {
     
     private static class Index {
         
-        private final INode.Id nodeId;
+        private final NodeId nodeId;
         
         private int index;
         
-        private Index(INode.Id nodeId, int index) {
+        private Index(NodeId nodeId, int index) {
             this.nodeId = nodeId;
             this.index = index;
         }
         
-        public INode.Id getNodeId() {
+        public NodeId getNodeId() {
             return nodeId;
         }
         
-        public boolean hasNext(INode<?, ?> node) {
+        public boolean hasNext(Node<?, ?> node) {
             return index < node.getTupleCount();
         }
         

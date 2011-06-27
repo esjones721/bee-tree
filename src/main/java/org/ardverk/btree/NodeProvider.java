@@ -25,11 +25,11 @@ public interface NodeProvider<K, V> {
         WRITE;
     }
     
-    public INode<K, V> allocate(int height);
+    public Node<K, V> allocate(int height);
     
-    public void free(INode<? extends K, ? extends V> node);
+    public void free(Node<? extends K, ? extends V> node);
     
-    public INode<K, V> get(INode.Id nodeId, Intent intent);
+    public Node<K, V> get(NodeId nodeId, Intent intent);
     
     public Comparator<? super K> comparator();
 }

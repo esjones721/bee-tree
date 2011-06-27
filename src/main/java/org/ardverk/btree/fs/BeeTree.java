@@ -136,7 +136,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                     binding.objectToKey(key));
             
             if (!root.isLeaf() && root.isEmpty()) {
-                Node<byte[], byte[]> tmp = root.firstNode(
+                Node<byte[], byte[]> tmp = root.firstChildNode(
                         provider, Intent.READ);
                 provider.free(root);
                 root = tmp;
