@@ -21,7 +21,7 @@ import java.util.Map;
 
 import org.ardverk.btree.AbstractBeeTree;
 import org.ardverk.btree.Node;
-import org.ardverk.btree.Node.Median;
+import org.ardverk.btree.Node.TupleNode;
 import org.ardverk.btree.NodeProvider;
 import org.ardverk.btree.NodeProvider.Intent;
 import org.ardverk.btree.Tuple;
@@ -47,11 +47,11 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
         Tuple<K, V> existing = null;
         synchronized (provider) {
             if (root.isOverflow()) {
-                Median<K, V> median = root.split(provider);
+                TupleNode<K, V> median = root.split(provider);
                 
                 Node<K, V> tmp = provider.allocate(false);
                 
-                tmp.addFirstChild(root.getId());
+                tmp.addFirstNode(root.getId());
                 tmp.addMedian(median);
                 
                 root = tmp;

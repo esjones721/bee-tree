@@ -34,7 +34,7 @@ import java.util.Map.Entry;
 import org.ardverk.btree.AbstractBeeTree;
 import org.ardverk.btree.Bucket;
 import org.ardverk.btree.Node;
-import org.ardverk.btree.Node.Median;
+import org.ardverk.btree.Node.TupleNode;
 import org.ardverk.btree.NodeId;
 import org.ardverk.btree.NodeProvider;
 import org.ardverk.btree.NodeProvider.Intent;
@@ -110,12 +110,12 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
         Tuple<byte[], byte[]> existing = null;
         synchronized (provider) {
             if (root.isOverflow()) {
-                Median<byte[], byte[]> median = root.split(provider);
+                TupleNode<byte[], byte[]> median = root.split(provider);
                 
                 int height = root.getHeight() + 1;
                 Node<byte[], byte[]> tmp = provider.allocate(height);
                 
-                tmp.addFirstChild(root.getId());
+                tmp.addFirstNode(root.getId());
                 tmp.addMedian(median);
                 
                 root = tmp;
@@ -364,10 +364,10 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                     }
                     
                     if (0 < height) {
-                        int nodeCount = node.getChildCount();
+                        int nodeCount = node.getNodeCount();
                         out.writeInt(nodeCount);
                         for (int i = 0; i < nodeCount; i++) {
-                            NodeId childId = node.getChild(i);
+                            NodeId childId = node.getNode(i);
                             ((StringId)childId).writeTo(out);
                         }
                     }

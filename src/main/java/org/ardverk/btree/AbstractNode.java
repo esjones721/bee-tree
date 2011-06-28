@@ -1,6 +1,6 @@
 package org.ardverk.btree;
 
-abstract class AbstractNode<K, V> implements NodeId {
+abstract class AbstractNode<K, V> {
 
     protected final NodeId nodeId;
     
@@ -14,7 +14,6 @@ abstract class AbstractNode<K, V> implements NodeId {
         this.t = t;
     }
     
-    @Override
     public NodeId getId() {
         return nodeId;
     }
@@ -41,5 +40,5 @@ abstract class AbstractNode<K, V> implements NodeId {
     
     public abstract int getTupleCount();
     
-    public abstract int getChildCount();
+    public abstract int getNodeCount();
 }
