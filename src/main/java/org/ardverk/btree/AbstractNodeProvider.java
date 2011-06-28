@@ -21,27 +21,26 @@ import java.util.Comparator;
 public abstract class AbstractNodeProvider<K, V> 
         implements NodeProvider<K, V>{ 
 
-    public static final int T = 1;
-    
     protected final Comparator<? super K> comparator;
     
-    protected final int t;
+    protected volatile Node<K, V> root = null;
     
     public AbstractNodeProvider() {
-        this(T);
+        this(KeyComparator.create());
     }
     
-    public AbstractNodeProvider(int t) {
-        this(KeyComparator.create(), t);
-    }
-    
-    public AbstractNodeProvider(Comparator<? super K> c) {
-        this(c, T);
-    }
-    
-    public AbstractNodeProvider(Comparator<? super K> comparator, int t) {
+    public AbstractNodeProvider(Comparator<? super K> comparator) {
         this.comparator = comparator;
-        this.t = t;
+    }
+    
+    @Override
+    public Node<K, V> getRoot() {
+        return root;
+    }
+
+    @Override
+    public void setRoot(Node<K, V> root) {
+        this.root = root;
     }
 
     @Override

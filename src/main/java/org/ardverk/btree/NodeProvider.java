@@ -25,6 +25,10 @@ public interface NodeProvider<K, V> {
         WRITE;
     }
     
+    public Node<K, V> getRoot();
+    
+    public void setRoot(Node<K, V> root);
+    
     public Node<K, V> allocate(int height);
     
     public void free(Node<? extends K, ? extends V> node);
