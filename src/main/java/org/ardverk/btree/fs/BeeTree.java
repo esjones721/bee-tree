@@ -116,7 +116,7 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> implements Closeable {
                 Node<byte[], byte[]> tmp = provider.allocate(height);
                 
                 tmp.addFirstNode(root.getId());
-                tmp.addMedian(median);
+                tmp.addTupleNode(median);
                 
                 root = tmp;
             }

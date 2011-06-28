@@ -3,7 +3,7 @@ package org.ardverk.btree;
 import java.util.Iterator;
 import java.util.Map;
 
-public abstract class AbstractBeeTree<K, V> implements BeeTree<K, V> {
+public abstract class AbstractBeeTree<K, V> implements BST<K, V> {
 
     @Override
     public Iterator<Map.Entry<K, V>> iterator(K key) {

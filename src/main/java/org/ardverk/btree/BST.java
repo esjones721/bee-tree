@@ -19,7 +19,7 @@ package org.ardverk.btree;
 import java.util.Iterator;
 import java.util.Map;
 
-public interface BeeTree<K, V> extends Iterable<Map.Entry<K, V>> {
+public interface BST<K, V> extends Iterable<Map.Entry<K, V>> {
 
     public V put(K key, V value);
 

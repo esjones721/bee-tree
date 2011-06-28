@@ -16,6 +16,7 @@
 
 package org.ardverk.btree;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,7 +31,9 @@ import java.util.RandomAccess;
  * A {@link Bucket} is a fixed-size ADT that implements some but not 
  * all {@link List} operations.
  */
-public class Bucket<E> implements List<E>, RandomAccess {
+public class Bucket<E> implements List<E>, RandomAccess, Serializable {
+    
+    private static final long serialVersionUID = 4843468621331832231L;
 
     protected final Object[] elements;
     

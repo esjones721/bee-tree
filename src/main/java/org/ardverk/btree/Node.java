@@ -16,6 +16,7 @@
 
 package org.ardverk.btree;
 
+import java.io.Serializable;
 import java.util.ArrayDeque;
 import java.util.Comparator;
 import java.util.Deque;
@@ -24,8 +25,10 @@ import java.util.NoSuchElementException;
 
 import org.ardverk.btree.NodeProvider.Intent;
 
-public class Node<K, V> extends AbstractNode<K, V> {
+public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
     
+    private static final long serialVersionUID = 4849945773148667662L;
+
     private final Bucket<Tuple<K, V>> tuples;
     
     private final Bucket<NodeId> children;
@@ -194,7 +197,7 @@ public class Node<K, V> extends AbstractNode<K, V> {
         children.add(index, nodeId);
     }
     
-    public void addMedian(TupleNode<K, V> median) {
+    public void addTupleNode(TupleNode<K, V> median) {
         addTupleNode(getTupleCount(), median);
     }
     
