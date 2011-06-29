@@ -16,58 +16,18 @@
 
 package org.ardverk.btree;
 
-import java.util.Comparator;
-
-public abstract class AbstractNodeProvider<K, V> 
-        implements NodeProvider<K, V>{ 
-
-    protected final Comparator<? super K> comparator;
+public abstract class AbstractNodeProvider 
+        implements NodeProvider { 
     
-    protected volatile Node<K, V> root = null;
-    
-    public AbstractNodeProvider() {
-        this(KeyComparator.create());
-    }
-    
-    public AbstractNodeProvider(Comparator<? super K> comparator) {
-        this.comparator = comparator;
-    }
+    protected volatile Node root = null;
     
     @Override
-    public Node<K, V> getRoot() {
+    public Node getRoot() {
         return root;
     }
 
     @Override
-    public void setRoot(Node<K, V> root) {
+    public void setRoot(Node root) {
         this.root = root;
-    }
-
-    @Override
-    public Comparator<? super K> comparator() {
-        return comparator;
-    }
-    
-    private static class KeyComparator<K> implements Comparator<K> {
-        
-        private static final Comparator<?> COMPARATOR 
-            = new KeyComparator<Object>();
-        
-        @SuppressWarnings("unchecked")
-        public static <K> Comparator<K> create() {
-            return (Comparator<K>)COMPARATOR;
-        }
-        
-        @SuppressWarnings("unchecked")
-        @Override
-        public int compare(K o1, K o2) {
-            if (o1 == null) {
-                return o2 == null ? 0 : -1;
-            } else if (o2 == null) {
-                return 1;
-            }
-            
-            return ((Comparable<K>)o1).compareTo(o2);
-        }
     }
 }

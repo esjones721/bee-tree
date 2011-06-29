@@ -16,6 +16,7 @@
 
 package org.ardverk.btree;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -23,34 +24,34 @@ import java.util.Map.Entry;
  * An immutable Key-Value pair. It implements the {@link Entry} interface
  * for convenience/compatibility purposes. 
  */
-public class Tuple<K, V> implements Map.Entry<K, V> {
+public class Tuple implements Map.Entry<byte[], byte[]> {
 
-    private final K key;
+    private final byte[] key;
     
-    private final V value;
+    private final byte[] value;
     
-    public Tuple(K key, V value) {
+    public Tuple(byte[] key, byte[] value) {
         this.key = key;
         this.value = value;
     }
 
     @Override
-    public K getKey() {
+    public byte[] getKey() {
         return key;
     }
 
     @Override
-    public V getValue() {
+    public byte[] getValue() {
         return value;
     }
     
     @Override
-    public V setValue(V value) {
+    public byte[] setValue(byte[] value) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public String toString() {
-        return key + "=" + value;
+        return Arrays.toString(key) + "=" + Arrays.toString(key);
     }
 }

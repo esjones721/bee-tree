@@ -20,6 +20,10 @@ import java.io.Closeable;
 
 public interface Cursor<E> extends Iterable<E>, Closeable {
 
+    public boolean hasNext();
+    
+    public boolean next(E dst);
+    
     @Override
     public void close();
 }

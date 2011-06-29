@@ -16,24 +16,20 @@
 
 package org.ardverk.btree;
 
-import java.util.Comparator;
-
-public interface NodeProvider<K, V> {
+public interface NodeProvider {
 
     public static enum Intent {
         READ,
         WRITE;
     }
     
-    public Node<K, V> getRoot();
+    public Node getRoot();
     
-    public void setRoot(Node<K, V> root);
+    public void setRoot(Node root);
     
-    public Node<K, V> allocate(int height);
+    public Node allocate(int height);
     
-    public void free(Node<? extends K, ? extends V> node);
+    public void free(Node node);
     
-    public Node<K, V> get(NodeId nodeId, Intent intent);
-    
-    public Comparator<? super K> comparator();
+    public Node get(NodeId nodeId, Intent intent);
 }

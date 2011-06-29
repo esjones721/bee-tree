@@ -1,14 +1,17 @@
 package org.ardverk.btree;
 
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
+
+import org.ardverk.btree.fs.TupleBinding2;
 
 public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
 
-    private final NodeProvider<K, V> provider;
+    private final TupleBinding2<K, V> binding;
     
-    public BeeTree(NodeProvider<K, V> provider) {
+    private final NodeProvider<byte[], byte[]> provider;
+    
+    public BeeTree(BeeTreeNodeProvider provider) {
         this.provider = provider;
     }
 
@@ -74,5 +77,31 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
     public Iterator<Entry<K, V>> iterator(K key, boolean inclusive) {
         // TODO Auto-generated method stub
         return null;
+    }
+    
+    private class EntryIterator implements Iterator<Entry<K, V>> {
+
+        private final Iterator<Tuple<byte[], byte[]>> it;
+        
+        public EntryIterator(Iterator<Tuple<byte[], byte[]>> it) {
+            this.it = it;
+        }
+        
+        @Override
+        public boolean hasNext() {
+            return it.hasNext();
+        }
+
+        @Override
+        public Entry<K, V> next() {
+            return new Map.Entry<K, V>() {
+            };
+        }
+
+        @Override
+        public void remove() {
+            it.remove();
+        }
+        
     }
 }

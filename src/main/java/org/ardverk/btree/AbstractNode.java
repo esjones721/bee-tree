@@ -1,6 +1,6 @@
 package org.ardverk.btree;
 
-abstract class AbstractNode<K, V> {
+abstract class AbstractNode {
 
     protected final NodeId nodeId;
     

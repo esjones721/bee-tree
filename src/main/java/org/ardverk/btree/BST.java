@@ -19,28 +19,64 @@ package org.ardverk.btree;
 import java.util.Iterator;
 import java.util.Map;
 
+/**
+ * 
+ */
 public interface BST<K, V> extends Iterable<Map.Entry<K, V>> {
 
+    /**
+     * 
+     */
     public V put(K key, V value);
 
+    /**
+     * 
+     */
     public V remove(K key);
 
+    /**
+     * 
+     */
     public V get(K key);
     
+    /**
+     * 
+     */
     public boolean contains(K key);
 
+    /**
+     * 
+     */
     public Map.Entry<K, V> ceilingEntry(K key);
 
+    /**
+     * 
+     */
     public Map.Entry<K, V> firstEntry();
 
+    /**
+     * 
+     */
     public Map.Entry<K, V> lastEntry();
 
+    /**
+     * 
+     */
     public void clear();
 
+    /**
+     * 
+     */
     public boolean isEmpty();
     
+    /**
+     * 
+     */
     public Iterator<Map.Entry<K, V>> iterator(K key);
 
+    /**
+     * 
+     */
     public Iterator<Map.Entry<K, V>> iterator(K key, boolean inclusive);
 
 }

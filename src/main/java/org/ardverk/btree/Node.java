@@ -16,30 +16,26 @@
 
 package org.ardverk.btree;
 
-import java.io.Serializable;
 import java.util.ArrayDeque;
-import java.util.Comparator;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.ardverk.btree.NodeProvider.Intent;
 
-public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
+public class Node extends AbstractNode {
     
-    private static final long serialVersionUID = 4849945773148667662L;
-
-    private final Bucket<Tuple<K, V>> tuples;
+    private final Bucket<Tuple> tuples;
     
     private final Bucket<NodeId> children;
     
     public Node(NodeId nodeId, int height, int t) {
-        this(nodeId, height, t, new Bucket<Tuple<K, V>>(2*t-1), 
+        this(nodeId, height, t, new Bucket<Tuple>(2*t-1), 
                 createBucket(height, 2*t));
     }
     
     public Node(NodeId nodeId, int height, int t, 
-            Bucket<Tuple<K, V>> tuples, 
+            Bucket<Tuple> tuples, 
             Bucket<NodeId> children) {
         super(nodeId, height, t);
         
@@ -55,7 +51,7 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         assert (children == null || children.getMaxSize() == 2*t);
     }
     
-    public Bucket<Tuple<K, V>> getTuples() {
+    public Bucket<Tuple> getTuples() {
         return tuples;
     }
     
@@ -71,23 +67,23 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         return children != null ? children.size() : 0;
     }
     
-    public Tuple<K, V> getTuple(int index) {
+    public Tuple getTuple(int index) {
         return tuples.get(index);
     }
     
-    private Tuple<K, V> removeTuple(int index) {
+    private Tuple removeTuple(int index) {
         return tuples.remove(index);
     }
     
-    public Tuple<K, V> firstTuple() {
+    public Tuple firstTuple() {
         return tuples.getFirst();
     }
     
-    public Tuple<K, V> lastTuple() {
+    public Tuple lastTuple() {
         return tuples.getLast();
     }
     
-    private Tuple<K, V> removeLastTuple() {
+    private Tuple removeLastTuple() {
         return tuples.removeLast();
     }
     
@@ -118,22 +114,22 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
     /**
      * Walk all the way to the left and return the first {@link Tuple}.
      */
-    public Tuple<K, V> firstTuple(NodeProvider<K, V> provider, Intent intent) {
+    public Tuple firstTuple(NodeProvider provider, Intent intent) {
         return firstNode(provider, intent).firstTuple();
     }
     
     /**
      * Walk all the way to the right and return the last {@link Tuple}.
      */
-    public Tuple<K, V> lastTuple(NodeProvider<K, V> provider, Intent intent) {
+    public Tuple lastTuple(NodeProvider provider, Intent intent) {
         return lastNode(provider, intent).lastTuple();
     }
     
     /**
      * Walks all the way to the left.
      */
-    public Node<K, V> firstNode(NodeProvider<K, V> provider, Intent intent) {
-        Node<K, V> node = this;
+    public Node firstNode(NodeProvider provider, Intent intent) {
+        Node node = this;
         while (!node.isLeaf()) {
             node = node.firstChildNode(provider, intent);
         }
@@ -144,8 +140,8 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
     /**
      * Walks all the way to the right.
      */
-    public Node<K, V> lastNode(NodeProvider<K, V> provider, Intent intent) {
-        Node<K, V> node = this;
+    public Node lastNode(NodeProvider provider, Intent intent) {
+        Node node = this;
         while (!node.isLeaf()) {
             node = node.lastChildNode(provider, intent);
         }
@@ -153,35 +149,35 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         return node;
     }
     
-    public Node<K, V> firstChildNode(NodeProvider<K, V> provider, Intent intent) {
+    public Node firstChildNode(NodeProvider provider, Intent intent) {
         NodeId first = firstNode();
         return provider.get(first, intent);
     }
     
-    public Node<K, V> lastChildNode(NodeProvider<K, V> provider, Intent intent) {
+    public Node lastChildNode(NodeProvider provider, Intent intent) {
         NodeId last = lastNode();
         return provider.get(last, intent);
     }
     
-    private Node<K, V> getNode(NodeProvider<K, V> provider, 
+    private Node getNode(NodeProvider provider, 
             int index, Intent intent) {
         NodeId nodeId = getNode(index);
         return provider.get(nodeId, intent);
     }
     
-    private Tuple<K, V> setTuple(int index, Tuple<K, V> tuple) {
+    private Tuple setTuple(int index, Tuple tuple) {
         return tuples.set(index, tuple);
     }
     
-    public void addTuple(Tuple<K, V> tuple) {
+    public void addTuple(Tuple tuple) {
         tuples.addLast(tuple);
     }
     
-    public void addFirstTuple(Tuple<K, V> tuple) {
+    public void addFirstTuple(Tuple tuple) {
         tuples.addFirst(tuple);
     }
     
-    private void addTuple(int index, Tuple<K, V> tuple) {
+    private void addTuple(int index, Tuple tuple) {
         tuples.add(index, tuple);
     }
     
@@ -197,22 +193,21 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         children.add(index, nodeId);
     }
     
-    public void addTupleNode(TupleNode<K, V> median) {
+    public void addTupleNode(TupleNode median) {
         addTupleNode(getTupleCount(), median);
     }
     
-    private void addTupleNode(int index, TupleNode<K, V> median) {
+    private void addTupleNode(int index, TupleNode median) {
         addTuple(index, median.getTuple());
         addNode(index+1, median.getNode());
     }
     
-    private int binarySearch(NodeProvider<K, V> provider, K key) {
-        Comparator<? super K> comparator = provider.comparator();
-        return TupleUtils.binarySearch(tuples, key, comparator);
+    private int binarySearch(byte[] key) {
+        return TupleUtils.binarySearch(tuples, key);
     }
     
-    public Tuple<K, V> ceilingTuple(NodeProvider<K, V> provider, K key) {
-        int index = binarySearch(provider, key);
+    public Tuple ceilingTuple(NodeProvider provider, byte[] key) {
+        int index = binarySearch(key);
         
         if (index >= 0 || isLeaf()) {
             if (index < 0) {
@@ -222,12 +217,12 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
             return getTuple(index);
         }
         
-        Node<K, V> node = getNode(provider, -index - 1, Intent.READ);
+        Node node = getNode(provider, -index - 1, Intent.READ);
         return node.ceilingTuple(provider, key);
     }
     
-    public Tuple<K, V> get(NodeProvider<K, V> provider, K key) {
-        int index = binarySearch(provider, key);
+    public Tuple get(NodeProvider provider, byte[] key) {
+        int index = binarySearch(key);
         
         // Found the Key?
         if (index >= 0) {
@@ -236,18 +231,18 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         
         // I didn't find it but I know where to look for it!
         if (!isLeaf()) {
-            Node<K, V> node = getNode(provider, -index - 1, Intent.READ);
+            Node node = getNode(provider, -index - 1, Intent.READ);
             return node.get(provider, key);
         }
         return null;
     }
     
-    public Tuple<K, V> put(NodeProvider<K, V> provider, K key, V value) {
-        int index = binarySearch(provider, key);
+    public Tuple put(NodeProvider provider, byte[] key, byte[] value) {
+        int index = binarySearch(key);
         
         // Replace an existing Key-Value
         if (index >= 0) {
-            return setTuple(index, new Tuple<K, V>(key, value));
+            return setTuple(index, new Tuple(key, value));
         }
         
         assert (index < 0);
@@ -256,20 +251,19 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         // Found a leaf where it should be stored!
         if (isLeaf()) {
             assert (!isOverflow());
-            addTuple(index, new Tuple<K, V>(key, value));
+            addTuple(index, new Tuple(key, value));
             return null;
         }
         
         // Keep looking!
-        Node<K, V> node = getNode(provider, index, Intent.WRITE);
+        Node node = getNode(provider, index, Intent.WRITE);
         
         if (node.isOverflow()) {
             
-            TupleNode<K, V> median = node.split(provider);
+            TupleNode median = node.split(provider);
             addTupleNode(index, median);
             
-            Comparator<? super K> comparator = provider.comparator();
-            int cmp = comparator.compare(key, median.getKey());
+            int cmp = TupleUtils.compare(key, median.getKey());
             if (0 < cmp) {
                 node = getNode(provider, index + 1, Intent.WRITE);
             }
@@ -278,9 +272,9 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         return node.put(provider, key, value);
     }
     
-    public Tuple<K, V> remove(NodeProvider<K, V> provider, K key) {
+    public Tuple remove(NodeProvider provider, byte[] key) {
         
-        int index = binarySearch(provider, key);
+        int index = binarySearch(key);
         
         // It must be here if it's a leaf!
         if (isLeaf()) {
@@ -299,7 +293,7 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         assert (index < 0);
         index = -index - 1;
         
-        Node<K, V> node = getNode(provider, index, Intent.WRITE);
+        Node node = getNode(provider, index, Intent.WRITE);
         
         if (node.isUnderflow()) {
             fix(provider, node, index);
@@ -308,25 +302,25 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         return node.remove(provider, key);
     }
     
-    private Tuple<K, V> removeInternal(NodeProvider<K, V> provider, K key, int index) {
-        Tuple<K, V> tuple = null;
+    private Tuple removeInternal(NodeProvider provider, byte[] key, int index) {
+        Tuple tuple = null;
         
-        Node<K, V> left = getNode(provider, index, Intent.WRITE);
+        Node left = getNode(provider, index, Intent.WRITE);
         if (!left.isUnderflow()) {
-            Tuple<K, V> last = left.lastTuple(provider, Intent.WRITE);
+            Tuple last = left.lastTuple(provider, Intent.WRITE);
             tuple = setTuple(index, last);
             left.remove(provider, last.getKey());
             
         } else {
             
-            Node<K, V> right = getNode(provider, index+1, Intent.WRITE);
+            Node right = getNode(provider, index+1, Intent.WRITE);
             if (!right.isUnderflow()) {
-                Tuple<K, V> first = right.firstTuple(provider, Intent.WRITE);
+                Tuple first = right.firstTuple(provider, Intent.WRITE);
                 tuple = setTuple(index, first);
                 right.remove(provider, first.getKey());
             } else {
                 
-                Tuple<K, V> median = removeTuple(index);
+                Tuple median = removeTuple(index);
                 removeNode(index+1);
                 
                 left.mergeWithRight(median, right);
@@ -340,17 +334,17 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         return tuple;
     }
     
-    private void fix(NodeProvider<K, V> provider, Node<K, V> node, int index) {
+    private void fix(NodeProvider provider, Node node, int index) {
         
-        Node<K, V> left = null;
+        Node left = null;
         if (0 < index) {
             left = getNode(provider, index-1, Intent.WRITE);
         }
         
         // Borrow Entry from left sibling
         if (left != null && !left.isUnderflow()) {
-            Tuple<K, V> last = left.removeLastTuple();
-            Tuple<K, V> tuple = setTuple(index-1, last);
+            Tuple last = left.removeLastTuple();
+            Tuple tuple = setTuple(index-1, last);
             node.addFirstTuple(tuple);
             
             if (!node.isLeaf()) {
@@ -358,15 +352,15 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
             }
         } else {
             
-            Node<K, V> right = null;
+            Node right = null;
             if (index < getNodeCount()-1) {
                 right = getNode(provider, index+1, Intent.WRITE);
             }
             
             // Borrow tuple from right sibling
             if (right != null && !right.isUnderflow()) {
-                Tuple<K, V> first = right.removeLastTuple();
-                Tuple<K, V> tuple = setTuple(index, first);
+                Tuple first = right.removeLastTuple();
+                Tuple tuple = setTuple(index, first);
                 node.addTuple(tuple);
                 
                 if (!node.isLeaf()) {
@@ -377,7 +371,7 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
             } else {
                 
                 if (left != null && !left.isEmpty()) {
-                    Tuple<K, V> median = removeTuple(index-1);
+                    Tuple median = removeTuple(index-1);
                     removeNode(index-1);
                     
                     node.mergeWithLeft(median, left);
@@ -385,7 +379,7 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
                     provider.free(left);
                 } else {
                     
-                    Tuple<K, V> median = removeTuple(index);
+                    Tuple median = removeTuple(index);
                     removeNode(index);
                     
                     node.mergeWithRight(median, right);
@@ -396,7 +390,7 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         }
     }
     
-    private void mergeWithRight(Tuple<K, V> median, Node<K, V> right) {
+    private void mergeWithRight(Tuple median, Node right) {
         tuples.addLast(median);
         tuples.addAll(right.tuples);
         if (!isLeaf()) {
@@ -404,7 +398,7 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         }
     }
     
-    private void mergeWithLeft(Tuple<K, V> median, Node<K, V> left) {
+    private void mergeWithLeft(Tuple median, Node left) {
         tuples.addFirst(median);
         tuples.addAll(0, left.tuples);
         if (!isLeaf()) {
@@ -412,16 +406,16 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         }
     }
     
-    public TupleNode<K, V> split(NodeProvider<K, V> provider) {
+    public TupleNode split(NodeProvider provider) {
         
         boolean leaf = isLeaf();
         
         int tupleCount = getTupleCount();
         int m = tupleCount/2;
         
-        Node<K, V> dst = provider.allocate(height);
+        Node dst = provider.allocate(height);
         
-        Tuple<K, V> median = removeTuple(m);
+        Tuple median = removeTuple(m);
         
         if (!leaf) {
             NodeId nodeId = removeNode(m+1);
@@ -436,12 +430,12 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
             }
         }
         
-        return new TupleNode<K, V>(median, dst.getId());
+        return new TupleNode(median, dst.getId());
     }
     
-    public Node<K, V> copy(NodeProvider<K, V> provider) {
+    public Node copy(NodeProvider provider) {
         boolean leaf = isLeaf();
-        Node<K, V> dst = provider.allocate(height);
+        Node dst = provider.allocate(height);
         
         dst.tuples.addAll(tuples);
         
@@ -452,24 +446,24 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         return dst;
     }
     
-    public Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider) {
+    public Iterator<Tuple> iterator(NodeProvider provider) {
         Deque<Index> stack = new ArrayDeque<Index>();
         
         stack.push(new Index(getId(), 0));
         walk(provider, this, stack.peek(), stack);
         
-        return new NodeIterator<K, V>(provider, stack);
+        return new NodeIterator(provider, stack);
     }
     
-    public Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider, 
-            K key, boolean inclusive) {
+    public Iterator<Tuple> iterator(NodeProvider provider, 
+            byte[] key, boolean inclusive) {
         return iterator(provider, key, inclusive, new ArrayDeque<Index>());
     }
     
-    private Iterator<Tuple<K, V>> iterator(NodeProvider<K, V> provider, 
-            K key, boolean inclusive, Deque<Index> stack) {
+    private Iterator<Tuple> iterator(NodeProvider provider, 
+            byte[] key, boolean inclusive, Deque<Index> stack) {
         
-        int index = binarySearch(provider, key);
+        int index = binarySearch(key);
         
         int path = (index < 0 ? -index - 1 : index);
         stack.push(new Index(getId(), path));
@@ -480,15 +474,15 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
                 stack.peek().next();
             }
             
-            return new NodeIterator<K, V>(provider, stack);
+            return new NodeIterator(provider, stack);
         }
         
-        Node<K, V> node = getNode(provider, path, Intent.READ);
+        Node node = getNode(provider, path, Intent.READ);
         return node.iterator(provider, key, inclusive, stack);
     }
     
-    private static <K, V> Index walk(NodeProvider<K, V> provider, 
-            Node<K, V> node, Index index, Deque<Index> stack) {
+    private static Index walk(NodeProvider provider, 
+            Node node, Index index, Deque<Index> stack) {
         
         while (!node.isLeaf()) {
             node = node.getNode(provider, index.get(), Intent.READ);
@@ -530,22 +524,22 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
      * and is the median element that needs to move up to its parent 
      * {@link Node}.
      */
-    public static class TupleNode<K, V> {
+    public static class TupleNode {
         
-        private final Tuple<K, V> tuple;
+        private final Tuple tuple;
         
         private final NodeId nodeId;
         
-        private TupleNode(Tuple<K, V> tuple, NodeId nodeId) {
+        private TupleNode(Tuple tuple, NodeId nodeId) {
             this.tuple = tuple;
             this.nodeId = nodeId;
         }
 
-        K getKey() {
+        byte[] getKey() {
             return tuple.getKey();
         }
         
-        public Tuple<K, V> getTuple() {
+        public Tuple getTuple() {
             return tuple;
         }
 
@@ -562,19 +556,19 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
     /**
      * An {@link Iterator} that iterates over a B-Tree.
      */
-    private static class NodeIterator<K, V> implements Iterator<Tuple<K, V>> {
+    private static class NodeIterator implements Iterator<Tuple> {
 
-        private final NodeProvider<K, V> provider;
+        private final NodeProvider provider;
         
         private final Deque<Index> stack;
         
         private Index index = null;
         
-        private Node<K, V> node = null;
+        private Node node = null;
         
-        private Tuple<K, V> next = null;
+        private Tuple next = null;
         
-        public NodeIterator(NodeProvider<K, V> provider, Deque<Index> stack) {
+        public NodeIterator(NodeProvider provider, Deque<Index> stack) {
             this.provider = provider;
             this.stack = stack;
             
@@ -586,7 +580,7 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
             }
         }
         
-        private Tuple<K, V> nextEntry() {
+        private Tuple nextEntry() {
             
             if (index.hasNext(node)) {
                 return index.next(node);
@@ -598,7 +592,7 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
                 assert (!node.isLeaf());
                 
                 if (index.hasNext(node)) {
-                    Tuple<K, V> next = index.next(node);
+                    Tuple next = index.next(node);
                     
                     index = Node.walk(provider, node, index, stack);
                     node = provider.get(index.getNodeId(), Intent.READ);
@@ -619,7 +613,7 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
         }
         
         @Override
-        public Tuple<K, V> next() {
+        public Tuple next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
@@ -656,11 +650,11 @@ public class Node<K, V> extends AbstractNode<K, V> implements Serializable {
             return nodeId;
         }
         
-        public boolean hasNext(Node<?, ?> node) {
+        public boolean hasNext(Node node) {
             return index < node.getTupleCount();
         }
         
-        public <K, V> Tuple<K, V> next(Node<K, V> node) {
+        public Tuple next(Node node) {
             return node.getTuple(index++);
         }
         
