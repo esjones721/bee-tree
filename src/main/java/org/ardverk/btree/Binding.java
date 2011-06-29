@@ -1,6 +1,6 @@
 package org.ardverk.btree;
 
-public interface DataBinding<T> {
+public interface Binding<T> {
 
     public byte[] objectToData(T obj);
     

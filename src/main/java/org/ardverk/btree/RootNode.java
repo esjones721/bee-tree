@@ -11,9 +11,16 @@ public class RootNode {
     
     private volatile Node root;
     
-    public RootNode(NodeProvider provider, Node root) {
+    private volatile int size = 0;
+    
+    public RootNode(NodeProvider provider, Node root, int size) {
         this.provider = provider;
         this.root = root;
+        this.size = size;
+    }
+    
+    public Node getRoot() {
+        return root;
     }
     
     public synchronized Tuple put(byte[] key, byte[] value) {
@@ -29,7 +36,13 @@ public class RootNode {
             root = tmp;
         }
         
-        return root.put(provider, key, value);
+        Tuple tuple = root.put(provider, key, value);
+        
+        if (tuple == null) {
+            ++size;
+        }
+        
+        return tuple;
     }
     
     public synchronized Tuple remove(byte[] key) {
@@ -42,10 +55,15 @@ public class RootNode {
             root = tmp;
         }
         
+        if (tuple != null) {
+            --size;
+        }
+        
         return tuple;
     }
     
     public synchronized void clear() {
+        size = 0;
         provider.free(root);
         root = provider.allocate(0);
     }
@@ -66,8 +84,12 @@ public class RootNode {
         return root.lastTuple(provider, Intent.READ);
     }
 
+    public int size() {
+        return size;
+    }
+    
     public boolean isEmpty() {
-        return root.isEmpty();
+        return size == 0;
     }
 
     public Iterator<Tuple> iterator() {

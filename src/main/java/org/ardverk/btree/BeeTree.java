@@ -15,71 +15,120 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
         this.provider = provider;
     }
 
+    private RootNode r() {
+        return provider.getRoot();
+    }
+    
+    private byte[] o2k(K key) {
+        return o2k(key);
+    }
+    
+    private byte[] o2v(V value) {
+        return o2v(value);
+    }
+    
+    private K k2o(Tuple tuple) {
+        return tuple != null ? binding.keyToObject(tuple.getKey()) : null;
+    }
+    
+    private V v2o(Tuple tuple) {
+        return tuple != null ? binding.valueToObject(tuple.getValue()) : null;
+    }
+    
     @Override
     public V put(K key, V value) {
-        Tuple tuple = provider.getRoot().put(
-                binding.objectToKey(key), binding.objectToValue(value));
-        return tuple != null ? binding.valueToObject(tuple.getValue()) : null;
+        Tuple tuple = r().put(o2k(key), o2v(value));
+        return v2o(tuple);
     }
 
     @Override
     public V remove(K key) {
-        Tuple tuple = provider.getRoot().remove(binding.objectToKey(key));
-        return tuple != null ? binding.valueToObject(tuple.getValue()) : null;
+        Tuple tuple = r().remove(o2k(key));
+        return v2o(tuple);
     }
 
     @Override
     public void clear() {
-        provider.getRoot().clear();
+        r().clear();
     }
     
     @Override
     public V get(K key) {
-        Tuple tuple = provider.getRoot().get(binding.objectToKey(key));
-        return tuple != null ? binding.valueToObject(tuple.getValue()) : null;
+        Tuple tuple = r().get(o2k(key));
+        return v2o(tuple);
     }
 
     @Override
     public boolean contains(K key) {
-        Tuple tuple = provider.getRoot().get(binding.objectToKey(key));
+        Tuple tuple = r().get(o2k(key));
         return tuple != null;
     }
 
     @Override
     public Entry<K, V> ceilingEntry(K key) {
-        Tuple tuple = provider.getRoot().ceilingTuple(
-                binding.objectToKey(key));
+        Tuple tuple = r().ceilingTuple(o2k(key));
         return tuple != null ? new TupleEntry(tuple) : null;
     }
 
     @Override
     public Entry<K, V> firstEntry() {
-        Tuple tuple = provider.getRoot().firstTuple();
+        Tuple tuple = r().firstTuple();
         return tuple != null ? new TupleEntry(tuple) : null;
     }
 
     @Override
     public Entry<K, V> lastEntry() {
-        Tuple tuple = provider.getRoot().lastTuple();
+        Tuple tuple = r().lastTuple();
         return tuple != null ? new TupleEntry(tuple) : null;
     }
 
     @Override
+    public int size() {
+        return r().size();
+    }
+    
+    @Override
     public boolean isEmpty() {
-        return provider.getRoot().isEmpty();
+        return r().isEmpty();
     }
 
     @Override
     public Iterator<Entry<K, V>> iterator() {
-        Iterator<Tuple> it = provider.getRoot().iterator();
+        Iterator<Tuple> it = r().iterator();
         return new EntryIterator(it);
     }
     
     @Override
     public Iterator<Entry<K, V>> iterator(K key, boolean inclusive) {
-        Iterator<Tuple> it = provider.getRoot().iterator( 
-                binding.objectToKey(key), inclusive);
+        Iterator<Tuple> it = r().iterator(o2k(key), inclusive);
         return new EntryIterator(it);
+    }
+    
+    @Override
+    public String toString() {
+        return toString(10);
+    }
+    
+    public String toString(int max) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("]");
+        
+        Iterator<Entry<K, V>> it = iterator();
+        if (it.hasNext()) {
+            for (int i = 0; i < max && it.hasNext(); i++) {
+                sb.append(it.next()).append(", ");
+            }
+            
+            if (it.hasNext()) {
+                sb.append(", ...");
+            } else {
+                sb.setLength(sb.length()-2);
+            }
+        }
+        
+        sb.append("]");
+        
+        return sb.toString();
     }
     
     private class EntryIterator implements Iterator<Entry<K, V>> {
@@ -116,17 +165,22 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
         
         @Override
         public K getKey() {
-            return binding.keyToObject(tuple.getKey());
+            return k2o(tuple);
         }
         
         @Override
         public V getValue() {
-            return binding.valueToObject(tuple.getValue());
+            return v2o(tuple);
         }
 
         @Override
         public V setValue(V value) {
             throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public String toString() {
+            return getKey() + "=" + getValue();
         }
     }
 }

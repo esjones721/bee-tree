@@ -67,6 +67,11 @@ public interface BST<K, V> extends Iterable<Map.Entry<K, V>> {
     /**
      * 
      */
+    public int size();
+    
+    /**
+     * 
+     */
     public boolean isEmpty();
     
     /**

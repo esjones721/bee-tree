@@ -1,16 +1,20 @@
 package org.ardverk.btree;
 
 public class DefaultTupleBinding<K, V> implements TupleBinding<K, V> {
-
-    private final DataBinding<K> kb;
     
-    private final DataBinding<V> vb;
-
-    public static <T> TupleBinding<T, T> create(DataBinding<T> binding) {
+    public static <T> TupleBinding<T, T> create(Binding<T> binding) {
         return new DefaultTupleBinding<T, T>(binding, binding);
     }
     
-    public DefaultTupleBinding(DataBinding<K> kb, DataBinding<V> vb) {
+    public static <K, V> TupleBinding<K, V> create(Binding<K> kb, Binding<V> vb) {
+        return new DefaultTupleBinding<K, V>(kb, vb);
+    }
+    
+    private final Binding<K> kb;
+    
+    private final Binding<V> vb;
+    
+    public DefaultTupleBinding(Binding<K> kb, Binding<V> vb) {
         this.kb = kb;
         this.vb = vb;
     }
