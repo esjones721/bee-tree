@@ -20,11 +20,11 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
     }
     
     private byte[] o2k(K key) {
-        return o2k(key);
+        return binding.objectToKey(key);
     }
     
     private byte[] o2v(V value) {
-        return o2v(value);
+        return binding.objectToValue(value);
     }
     
     private K k2o(Tuple tuple) {

@@ -18,7 +18,7 @@ public abstract class AbstractBeeTree<K, V> implements BST<K, V> {
     
     public String toString(int max) {
         StringBuilder sb = new StringBuilder();
-        sb.append("]");
+        sb.append("[");
         
         Iterator<Entry<K, V>> it = iterator();
         if (it.hasNext()) {

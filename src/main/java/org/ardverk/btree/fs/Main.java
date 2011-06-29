@@ -12,12 +12,14 @@ public class Main {
         TupleBinding<String, String> binding 
             = DefaultTupleBinding.create(StringBinding.BINDING);
         
-        NodeProvider provider = null;
+        NodeProvider provider = new FileSystemNodeProvider(null, 2);
         
         BeeTree<String, String> tree 
             = new BeeTree<String, String>(provider, binding);
         
-        tree.put("Hello", "World");
+        for (int i = 0; i < 100; i++) {
+            tree.put("Hello-" + i, "World");
+        }
         
         System.out.println(tree);
     }
