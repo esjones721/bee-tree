@@ -23,9 +23,7 @@ public interface NodeProvider {
         WRITE;
     }
     
-    public Node getRoot();
-    
-    public void setRoot(Node root);
+    public RootNode getRoot();
     
     public Node allocate(int height);
     
