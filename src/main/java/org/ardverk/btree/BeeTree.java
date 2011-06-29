@@ -9,11 +9,11 @@ import org.ardverk.btree.NodeProvider.Intent;
 
 public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
 
-    private final Binding<K, V> binding;
-    
     private final NodeProvider provider;
     
-    public BeeTree(Binding<K, V> binding, NodeProvider provider) {
+    private final TupleBinding<K, V> binding;
+    
+    public BeeTree(NodeProvider provider, TupleBinding<K, V> binding) {
         this.binding = binding;
         this.provider = provider;
     }
