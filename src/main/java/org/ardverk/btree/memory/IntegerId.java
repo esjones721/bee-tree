@@ -18,9 +18,9 @@ package org.ardverk.btree.memory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.ardverk.btree.Node;
+import org.ardverk.btree.NodeId;
 
-class IntegerId implements Node.Id {
+class IntegerId implements NodeId {
     
     private static final AtomicInteger COUNTER = new AtomicInteger();
     

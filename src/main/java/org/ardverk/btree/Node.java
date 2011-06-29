@@ -576,11 +576,11 @@ public class Node extends AbstractNode {
                 index = stack.poll();
                 node = provider.get(index.getNodeId(), Intent.READ);
                 
-                next = nextEntry();
+                next = nextTuple();
             }
         }
         
-        private Tuple nextEntry() {
+        private Tuple nextTuple() {
             
             if (index.hasNext(node)) {
                 return index.next(node);
@@ -601,7 +601,7 @@ public class Node extends AbstractNode {
                 }
                 
                 stack.pop();
-                return nextEntry();
+                return nextTuple();
             }
             
             return null; // EOF
@@ -621,7 +621,7 @@ public class Node extends AbstractNode {
             try {
                 return next;
             } finally {
-                next = nextEntry();
+                next = nextTuple();
             }
         }
 

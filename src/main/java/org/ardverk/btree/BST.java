@@ -20,7 +20,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 /**
- * 
+ * Interface description of a Binary Search Tree (BST).
  */
 public interface BST<K, V> extends Iterable<Map.Entry<K, V>> {
 

@@ -38,6 +38,7 @@ public class RootNode {
         
         Tuple tuple = root.put(provider, key, value);
         
+        // A new Key-Value was inserted!
         if (tuple == null) {
             ++size;
         }
@@ -55,6 +56,7 @@ public class RootNode {
             root = tmp;
         }
         
+        // A Key-Value was removed!
         if (tuple != null) {
             --size;
         }
@@ -64,8 +66,11 @@ public class RootNode {
     
     public synchronized void clear() {
         size = 0;
-        provider.free(root);
+        
+        Node tmp = root;
         root = provider.allocate(0);
+        
+        provider.free(tmp);
     }
     
     public Tuple get(byte[] key) {
