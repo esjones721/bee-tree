@@ -1,23 +1,20 @@
 package org.ardverk.btree;
 
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
-import org.ardverk.btree.fs.TupleBinding2;
+import org.ardverk.btree.NodeProvider.Intent;
 
 public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
 
-    private final TupleBinding2<K, V> binding;
+    private final Binding<K, V> binding;
     
-    private final NodeProvider<byte[], byte[]> provider;
+    private final NodeProvider provider;
     
-    public BeeTree(BeeTreeNodeProvider provider) {
+    public BeeTree(Binding<K, V> binding, NodeProvider provider) {
+        this.binding = binding;
         this.provider = provider;
-    }
-
-    @Override
-    public Iterator<Entry<K, V>> iterator() {
-        return provider.getRoot().iterator(provider);
     }
 
     @Override
@@ -30,42 +27,50 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
 
     @Override
     public V remove(K key) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public V get(K key) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public boolean contains(K key) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public Entry<K, V> ceilingEntry(K key) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Entry<K, V> firstEntry() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Entry<K, V> lastEntry() {
-        // TODO Auto-generated method stub
+        synchronized (provider) {
+            
+        }
         return null;
     }
 
     @Override
     public void clear() {
+        synchronized (provider) {
+            
+        }
+    }
+    
+    @Override
+    public V get(K key) {
+        Tuple tuple = provider.getRoot().get(provider, 
+                binding.objectToKey(key));
+        return tuple != null ? binding.valueToObject(tuple.getValue()) : null;
+    }
+
+    @Override
+    public boolean contains(K key) {
+        Tuple tuple = provider.getRoot().get(provider, 
+                binding.objectToKey(key));
+        return tuple != null;
+    }
+
+    @Override
+    public Entry<K, V> ceilingEntry(K key) {
+        Tuple tuple = provider.getRoot().ceilingTuple(provider, 
+                binding.objectToKey(key));
+        return tuple != null ? new TupleEntry(tuple) : null;
+    }
+
+    @Override
+    public Entry<K, V> firstEntry() {
+        Tuple tuple = provider.getRoot().firstTuple(provider, Intent.READ);
+        return tuple != null ? new TupleEntry(tuple) : null;
+    }
+
+    @Override
+    public Entry<K, V> lastEntry() {
+        Tuple tuple = provider.getRoot().lastTuple(provider, Intent.READ);
+        return tuple != null ? new TupleEntry(tuple) : null;
     }
 
     @Override
@@ -74,16 +79,23 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
     }
 
     @Override
+    public Iterator<Entry<K, V>> iterator() {
+        Iterator<Tuple> it = provider.getRoot().iterator(provider);
+        return new EntryIterator(it);
+    }
+    
+    @Override
     public Iterator<Entry<K, V>> iterator(K key, boolean inclusive) {
-        // TODO Auto-generated method stub
-        return null;
+        Iterator<Tuple> it = provider.getRoot().iterator(provider, 
+                binding.objectToKey(key), inclusive);
+        return new EntryIterator(it);
     }
     
     private class EntryIterator implements Iterator<Entry<K, V>> {
 
-        private final Iterator<Tuple<byte[], byte[]>> it;
+        private final Iterator<Tuple> it;
         
-        public EntryIterator(Iterator<Tuple<byte[], byte[]>> it) {
+        public EntryIterator(Iterator<Tuple> it) {
             this.it = it;
         }
         
@@ -94,14 +106,36 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
 
         @Override
         public Entry<K, V> next() {
-            return new Map.Entry<K, V>() {
-            };
+            return new TupleEntry(it.next());
         }
 
         @Override
         public void remove() {
             it.remove();
         }
+    }
+    
+    private class TupleEntry implements Map.Entry<K, V> {
         
+        private final Tuple tuple;
+
+        public TupleEntry(Tuple tuple) {
+            this.tuple = tuple;
+        }
+        
+        @Override
+        public K getKey() {
+            return binding.keyToObject(tuple.getKey());
+        }
+        
+        @Override
+        public V getValue() {
+            return binding.valueToObject(tuple.getValue());
+        }
+
+        @Override
+        public V setValue(V value) {
+            throw new UnsupportedOperationException();
+        }
     }
 }
