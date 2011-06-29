@@ -104,33 +104,6 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
         return new EntryIterator(it);
     }
     
-    @Override
-    public String toString() {
-        return toString(10);
-    }
-    
-    public String toString(int max) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("]");
-        
-        Iterator<Entry<K, V>> it = iterator();
-        if (it.hasNext()) {
-            for (int i = 0; i < max && it.hasNext(); i++) {
-                sb.append(it.next()).append(", ");
-            }
-            
-            if (it.hasNext()) {
-                sb.append(", ...");
-            } else {
-                sb.setLength(sb.length()-2);
-            }
-        }
-        
-        sb.append("]");
-        
-        return sb.toString();
-    }
-    
     private class EntryIterator implements Iterator<Entry<K, V>> {
 
         private final Iterator<Tuple> it;

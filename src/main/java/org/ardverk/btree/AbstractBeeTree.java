@@ -2,6 +2,7 @@ package org.ardverk.btree;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public abstract class AbstractBeeTree<K, V> implements BST<K, V> {
 
@@ -12,18 +13,28 @@ public abstract class AbstractBeeTree<K, V> implements BST<K, V> {
     
     @Override
     public String toString() {
+        return toString(10);
+    }
+    
+    public String toString(int max) {
         StringBuilder sb = new StringBuilder();
-        sb.append("[");
+        sb.append("]");
         
-        if (!isEmpty()) {
-            for (Map.Entry<K, V> entry : this) {
-                sb.append(entry).append(", ");
+        Iterator<Entry<K, V>> it = iterator();
+        if (it.hasNext()) {
+            for (int i = 0; i < max && it.hasNext(); i++) {
+                sb.append(it.next()).append(", ");
             }
             
-            sb.setLength(sb.length()-2);
+            if (it.hasNext()) {
+                sb.append(size() - max).append(" more...");
+            } else {
+                sb.setLength(sb.length()-2);
+            }
         }
         
         sb.append("]");
+        
         return sb.toString();
     }
 }
