@@ -14,7 +14,7 @@
  *   limitations under the License.
  */
 
-package org.ardverk.btree.fs;
+package org.ardverk.btree;
 
 import java.io.DataInput;
 import java.io.DataOutput;

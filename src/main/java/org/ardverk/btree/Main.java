@@ -1,10 +1,5 @@
-package org.ardverk.btree.fs;
+package org.ardverk.btree;
 
-import org.ardverk.btree.BeeTree;
-import org.ardverk.btree.DefaultTupleBinding;
-import org.ardverk.btree.NodeProvider;
-import org.ardverk.btree.StringBinding;
-import org.ardverk.btree.TupleBinding;
 
 public class Main {
     
@@ -12,7 +7,7 @@ public class Main {
         TupleBinding<String, String> binding 
             = DefaultTupleBinding.create(StringBinding.BINDING);
         
-        NodeProvider provider = new FileSystemNodeProvider(null, 2);
+        NodeProvider provider = new MemoryNodeProvider(2);
         
         BeeTree<String, String> tree 
             = new BeeTree<String, String>(provider, binding);

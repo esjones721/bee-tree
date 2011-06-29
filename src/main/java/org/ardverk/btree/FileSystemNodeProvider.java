@@ -1,4 +1,4 @@
-package org.ardverk.btree.fs;
+package org.ardverk.btree;
 
 import java.io.File;
 import java.util.LinkedHashMap;

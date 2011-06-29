@@ -4,7 +4,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public abstract class AbstractBeeTree<K, V> implements BST<K, V> {
+abstract class AbstractBeeTree<K, V> implements BST<K, V> {
 
     @Override
     public Iterator<Map.Entry<K, V>> iterator(K key) {

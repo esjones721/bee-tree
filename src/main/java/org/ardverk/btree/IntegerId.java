@@ -14,7 +14,7 @@
  *   limitations under the License.
  */
 
-package org.ardverk.btree.memory;
+package org.ardverk.btree;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
