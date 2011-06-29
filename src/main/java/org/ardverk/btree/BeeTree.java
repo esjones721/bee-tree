@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.ardverk.btree.Node.TupleNode;
 import org.ardverk.btree.NodeProvider.Intent;
 
 public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
@@ -19,24 +20,57 @@ public class BeeTree<K, V> extends AbstractBeeTree<K, V> {
 
     @Override
     public V put(K key, V value) {
+        
+        byte[] bk = binding.objectToKey(key);
+        byte[] bv = binding.objectToValue(value);
+        
+        Tuple existing = null;
         synchronized (provider) {
+            Node root = provider.getRoot();
+            if (root.isOverflow()) {
+                TupleNode median = root.split(provider);
+                
+                int height = root.getHeight() + 1;
+                Node tmp = provider.allocate(height);
+                
+                tmp.addFirstNode(root.getId());
+                tmp.addTupleNode(median);
+                
+                root = tmp;
+                provider.setRoot(root);
+            }
             
+            existing = root.put(provider, bk, bv);
         }
-        return null;
+        
+        return existing != null ? binding.valueToObject(existing.getValue()) : null;
     }
 
     @Override
     public V remove(K key) {
+        byte[] bk = binding.objectToKey(key);
+        
+        Tuple tuple = null;
         synchronized (provider) {
+            Node root = provider.getRoot();
+            tuple = root.remove(provider, bk);
             
+            if (!root.isLeaf() && root.isEmpty()) {
+                Node tmp = root.firstChildNode(
+                        provider, Intent.READ);
+                provider.free(root);
+                root = tmp;
+                provider.setRoot(root);
+            }
         }
-        return null;
+        return tuple != null ? binding.valueToObject(tuple.getValue()) : null;
     }
 
     @Override
     public void clear() {
         synchronized (provider) {
-            
+            provider.free(provider.getRoot());
+            provider.setRoot(provider.allocate(0));
         }
     }
     
