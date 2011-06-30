@@ -1,12 +1,15 @@
 package org.ardverk.btree;
 
 import java.util.Iterator;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.ardverk.btree.Node.TupleNode;
 import org.ardverk.btree.NodeProvider.Intent;
 
-public class RootNode {
+public class RootNode implements Lockable {
 
+    private final ReentrantLock lock = new ReentrantLock();
+    
     private final NodeProvider provider;
     
     private volatile Node root;
@@ -19,31 +22,56 @@ public class RootNode {
         this.size = size;
     }
     
+    @Override
+    public void lock() {
+        lock.lock();
+    }
+    
+    @Override
+    public void unlock() {
+        lock.unlock();
+    }
+    
     public Node getRoot() {
         return root;
     }
     
-    public synchronized Tuple put(byte[] key, byte[] value) {
-        if (root.isOverflow()) {
-            TupleNode median = root.split(provider);
+    public Tuple put(byte[] key, byte[] value) {
+        boolean success = false;
+        lock();
+        try {
+            if (root.isOverflow()) {
+                TupleNode median = root.split(provider);
+                
+                int height = root.getHeight() + 1;
+                Node tmp = provider.allocate(height);
+                
+                tmp.addFirstNode(root.getId());
+                tmp.addTupleNode(median);
+                
+                root = tmp;
+            }
             
-            int height = root.getHeight() + 1;
-            Node tmp = provider.allocate(height);
-            
-            tmp.addFirstNode(root.getId());
-            tmp.addTupleNode(median);
-            
-            root = tmp;
+            root.lock();
+            try {
+                Tuple tuple = root.put(provider, this, key, value);
+                
+                // A new Key-Value was inserted!
+                if (tuple == null) {
+                    ++size;
+                }
+                success = true;
+                return tuple;
+            } finally {
+                if (!success) {
+                    root.unlock();
+                }
+            }
+        } finally {
+            if (!success) {
+                unlock();
+            }
         }
-        
-        Tuple tuple = root.put(provider, key, value);
-        
-        // A new Key-Value was inserted!
-        if (tuple == null) {
-            ++size;
-        }
-        
-        return tuple;
     }
     
     public synchronized Tuple remove(byte[] key) {
@@ -103,5 +131,10 @@ public class RootNode {
     
     public Iterator<Tuple> iterator(byte[] key, boolean inclusive) {
         return root.iterator(provider, key, inclusive);
+    }
+    
+    @Override
+    public String toString() {
+        return "ROOT: " + root;
     }
 }

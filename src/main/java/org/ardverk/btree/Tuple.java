@@ -52,6 +52,7 @@ public class Tuple implements Map.Entry<byte[], byte[]> {
 
     @Override
     public String toString() {
-        return Arrays.toString(key) + "=" + Arrays.toString(key);
+        //return Arrays.toString(key) + "=" + Arrays.toString(value);
+        return new String(key) + "=" + new String(value);
     }
 }
