@@ -20,13 +20,10 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.ardverk.btree.NodeProvider.Intent;
 
-public class Node extends AbstractNode implements Lockable {
-    
-    private final ReentrantLock lock = new ReentrantLock();
+public class Node extends AbstractNode {
     
     private final Bucket<Tuple> tuples;
     
@@ -52,16 +49,6 @@ public class Node extends AbstractNode implements Lockable {
         
         assert (tuples.getMaxSize() == 2*t-1);
         assert (children == null || children.getMaxSize() == 2*t);
-    }
-    
-    @Override
-    public void lock() {
-        lock.lock();
-    }
-    
-    @Override
-    public void unlock() {
-        lock.unlock();
     }
     
     public Bucket<Tuple> getTuples() {
@@ -250,16 +237,12 @@ public class Node extends AbstractNode implements Lockable {
         return null;
     }
     
-    public Tuple put(NodeProvider provider, Lockable parent, byte[] key, byte[] value) {
+    public Tuple put(NodeProvider provider, byte[] key, byte[] value) {
         int index = binarySearch(key);
         
         // Replace an existing Key-Value
         if (index >= 0) {
-            try {
-                return setTuple(index, new Tuple(key, value));
-            } finally {
-                unlock();
-            }
+            return setTuple(index, new Tuple(key, value));
         }
         
         assert (index < 0);
@@ -268,12 +251,8 @@ public class Node extends AbstractNode implements Lockable {
         // Found a leaf where it should be stored!
         if (isLeaf()) {
             assert (!isOverflow());
-            try {
-                addTuple(index, new Tuple(key, value));
-                return null;
-            } finally {
-                unlock();
-            }
+            addTuple(index, new Tuple(key, value));
+            return null;
         }
         
         // Keep looking!
@@ -289,18 +268,7 @@ public class Node extends AbstractNode implements Lockable {
             }
         }
         
-        boolean success = false;
-        node.lock();
-        try {
-            parent.unlock();
-            Tuple tuple = node.put(provider, this, key, value);
-            success = true;
-            return tuple;
-        } finally {
-            if (!success) {
-                node.unlock();
-            }
-        }
+        return node.put(provider, key, value);
     }
     
     public Tuple remove(NodeProvider provider, byte[] key) {

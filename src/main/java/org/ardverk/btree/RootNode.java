@@ -1,14 +1,11 @@
 package org.ardverk.btree;
 
 import java.util.Iterator;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.ardverk.btree.Node.TupleNode;
 import org.ardverk.btree.NodeProvider.Intent;
 
-public class RootNode implements Lockable {
-
-    private final ReentrantLock lock = new ReentrantLock();
+public class RootNode {
     
     private final NodeProvider provider;
     
@@ -22,59 +19,34 @@ public class RootNode implements Lockable {
         this.size = size;
     }
     
-    @Override
-    public void lock() {
-        lock.lock();
-    }
-    
-    @Override
-    public void unlock() {
-        lock.unlock();
-    }
-    
     public Node getRoot() {
         return root;
     }
     
     public Tuple put(byte[] key, byte[] value) {
-        boolean success = false;
-        lock();
-        try {
-            if (root.isOverflow()) {
-                TupleNode median = root.split(provider);
-                
-                int height = root.getHeight() + 1;
-                Node tmp = provider.allocate(height);
-                
-                tmp.addFirstNode(root.getId());
-                tmp.addTupleNode(median);
-                
-                root = tmp;
-            }
+        if (root.isOverflow()) {
+            TupleNode median = root.split(provider);
             
-            root.lock();
-            try {
-                Tuple tuple = root.put(provider, this, key, value);
-                
-                // A new Key-Value was inserted!
-                if (tuple == null) {
-                    ++size;
-                }
-                success = true;
-                return tuple;
-            } finally {
-                if (!success) {
-                    root.unlock();
-                }
-            }
-        } finally {
-            if (!success) {
-                unlock();
-            }
+            int height = root.getHeight() + 1;
+            Node tmp = provider.allocate(height);
+            
+            tmp.addFirstNode(root.getId());
+            tmp.addTupleNode(median);
+            
+            root = tmp;
         }
+        
+        Tuple tuple = root.put(provider, key, value);
+        
+        // A new Key-Value was inserted!
+        if (tuple == null) {
+            ++size;
+        }
+        
+        return tuple;
     }
     
-    public synchronized Tuple remove(byte[] key) {
+    public Tuple remove(byte[] key) {
         Tuple tuple = root.remove(provider, key);
         
         if (!root.isLeaf() && root.isEmpty()) {
@@ -92,7 +64,7 @@ public class RootNode implements Lockable {
         return tuple;
     }
     
-    public synchronized void clear() {
+    public void clear() {
         size = 0;
         
         Node tmp = root;
