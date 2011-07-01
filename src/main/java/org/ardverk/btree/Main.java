@@ -1,7 +1,5 @@
 package org.ardverk.btree;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 
 public class Main {
@@ -10,44 +8,38 @@ public class Main {
         TupleBinding<String, String> binding 
             = DefaultTupleBinding.create(StringBinding.BINDING);
         
-        NodeProvider provider = new MemoryNodeProvider(2);
+        /*FileSystemNodeProvider provider 
+            = new FileSystemNodeProvider("tree", 128, 64);*/
         
-        final BeeTree<String, String> tree 
+        NodeProvider provider 
+            = new MemoryNodeProvider(2);
+        
+        BeeTree<String, String> tree 
             = new BeeTree<String, String>(provider, binding);
         
-        final CountDownLatch latch = new CountDownLatch(2);
+        System.out.println(tree.size());
         
-        Runnable task1 = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (int i = 0; i < 100; i++) {
-                        tree.put("Hello-" + i, "World");
-                    }
-                } finally {
-                    latch.countDown();
-                }
+        for (int i = 0; i < 10; i++) {
+            tree.put("Hello-" + i, "World-" + i);
+        }
+        
+        System.out.println("PROVIDER: " + provider);
+        System.out.println("TREE: " + tree);
+        
+        for (int i = 0; i < 5; i++) {
+            String key = "Hello-" + i;
+            String expected = "World-" + i;
+            String value = tree.remove(key);
+            
+            if (!expected.equals(value)) {
+                throw new IllegalStateException(expected + " vs. " + value);
             }
-        };
+        }
         
-        Runnable task2 = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (int i = 0; i < 100; i++) {
-                        tree.put("Hello-" + (100+i), "World");
-                    }
-                } finally {
-                    latch.countDown();
-                }
-            }
-        };
+        for (int i = 0; i < 10; i++) {
+            System.out.println(tree.get("Hello-" + i));
+        }
         
-        (new Thread(task1)).start();
-        task2.run();
-        
-        boolean success = latch.await(5L, TimeUnit.SECONDS);
-        System.out.println(success);
-        System.out.println(tree);
+        //provider.close();
     }
 }

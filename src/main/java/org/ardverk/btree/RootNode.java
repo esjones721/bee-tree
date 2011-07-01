@@ -19,6 +19,10 @@ public class RootNode {
         this.size = size;
     }
     
+    public NodeId getId() {
+        return root.getId();
+    }
+    
     public Node getRoot() {
         return root;
     }
