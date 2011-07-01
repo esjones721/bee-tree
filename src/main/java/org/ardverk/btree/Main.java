@@ -17,18 +17,7 @@ public class Main {
         BeeTree<String, String> tree 
             = new BeeTree<String, String>(provider, binding);
     
-        String[] keys = new String[] {
-            "5",
-            "9",
-            "3",
-            "7",
-            "1",
-            "2",
-            "8",
-            "6",
-            "0",
-            "4"
-        };
+        String[] keys = "5 9 3 7 1 2 8 6 0 4".split(" ");
         
         for (String key : keys) {
             tree.put(key, key);
@@ -36,7 +25,6 @@ public class Main {
         
         Collections.shuffle(Arrays.asList(keys));
         
-        System.out.println(tree);
         System.out.println(provider);
         System.out.println(Arrays.toString(keys));
         
@@ -60,37 +48,41 @@ public class Main {
             = DefaultTupleBinding.create(StringBinding.BINDING);
         
         NodeProvider provider 
-            = new MemoryNodeProvider(3);
+            = new MemoryNodeProvider(2.5f);
         
         String[] keys = "C N G A H E K Q M F W L T Z D P R X Y S".split(" ");
         
         BeeTree<String, String> tree 
             = new BeeTree<String, String>(provider, binding);
-    
-        int index = 0;
+        
         for (String key : keys) {
             tree.put(key, key);
             
-            ++index;
-            
             if (key.equals("Q") || key.equals("M") || key.equals("T")) {
                 System.out.println(key);
-                System.out.println(tree);
                 System.out.println(provider);
-            }
-            
-            switch (index) {
-                case 4:
-                case 5:
-                case 9:
-                    System.out.println("INDEX: " + index);
-                    System.out.println(tree);
-                    System.out.println(provider);
-                    break;
             }
         }
         
-        System.out.println(tree);
+        System.out.println(provider);
+    }
+    
+    private static void test3() {
+        TupleBinding<String, String> binding 
+            = DefaultTupleBinding.create(StringBinding.BINDING);
+        
+        NodeProvider provider 
+            = new MemoryNodeProvider(2.5f);
+        
+        String[] keys = "G M P X A C D E J K N O R S T U V Y Z".split(" ");
+        
+        BeeTree<String, String> tree 
+            = new BeeTree<String, String>(provider, binding);
+    
+        for (String key : keys) {
+            tree.put(key, key);
+        }
+        
         System.out.println(provider);
     }
     
@@ -99,6 +91,8 @@ public class Main {
             test();
         }*/
         
-        test2();
+        test();
+        //test2();
+        //test3();
     }
 }
