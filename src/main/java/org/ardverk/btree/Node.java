@@ -30,8 +30,11 @@ public class Node extends AbstractNode {
     private final Bucket<NodeId> children;
     
     public Node(NodeId nodeId, int height, int t) {
-        this(nodeId, height, t, new Bucket<Tuple>(2*t-1), 
-                createBucket(height, 2*t));
+        /*this(nodeId, height, t, new Bucket<Tuple>(2*t-1), 
+                createBucket(height, 2*t));*/
+        
+        this(nodeId, height, t, new Bucket<Tuple>(4), 
+                createBucket(height, 5));
     }
     
     public Node(NodeId nodeId, int height, int t, 

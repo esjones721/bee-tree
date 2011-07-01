@@ -54,10 +54,14 @@ public class RootNode {
         Tuple tuple = root.remove(provider, key);
         
         if (!root.isLeaf() && root.isEmpty()) {
+            System.out.println(root);
+            
             Node tmp = root.firstChildNode(
                     provider, Intent.READ);
             provider.free(root);
             root = tmp;
+            
+            System.out.println("NEW ROOT: " + root);
         }
         
         // A Key-Value was removed!

@@ -1,71 +1,104 @@
 package org.ardverk.btree;
 
+import java.util.Arrays;
+import java.util.Collections;
+
 
 
 public class Main {
     
-    public static void main(String[] args) throws InterruptedException {
+    private static void test() {
         TupleBinding<String, String> binding 
             = DefaultTupleBinding.create(StringBinding.BINDING);
-        
-        /*FileSystemNodeProvider provider 
-            = new FileSystemNodeProvider("tree", 128, 64);*/
         
         NodeProvider provider 
             = new MemoryNodeProvider(2);
         
         BeeTree<String, String> tree 
             = new BeeTree<String, String>(provider, binding);
+    
+        String[] keys = new String[] {
+            "5",
+            "9",
+            "3",
+            "7",
+            "1",
+            "2",
+            "8",
+            "6",
+            "0",
+            "4"
+        };
         
-        tree.put("5", "5");
-        tree.put("9", "9");
-        tree.put("3", "3");
-        System.out.println(provider);
-        
-        tree.put("7", "7");
-        System.out.println(provider);
-        
-        tree.put("1", "1");
-        System.out.println(provider);
-        
-        tree.put("2", "2");
-        System.out.println(provider);
-        
-        tree.put("8", "8");
-        System.out.println(provider);
-        
-        tree.put("6", "6");
-        System.out.println(provider);
-        
-        tree.put("0", "0");
-        System.out.println(provider);
-        
-        tree.put("4", "4");
-        System.out.println(provider);
-        
-        /*System.out.println(tree.size());
-        
-        for (int i = 0; i < 10; i++) {
-            tree.put("Hello-" + i, "World-" + i);
+        for (String key : keys) {
+            tree.put(key, key);
         }
         
-        System.out.println("PROVIDER: " + provider);
-        System.out.println("TREE: " + tree);
+        Collections.shuffle(Arrays.asList(keys));
         
-        for (int i = 0; i < 5; i++) {
-            String key = "Hello-" + i;
-            String expected = "World-" + i;
-            String value = tree.remove(key);
+        System.out.println(tree);
+        System.out.println(provider);
+        System.out.println(Arrays.toString(keys));
+        
+        for (String key : keys) {
+            String value = null;
             
-            if (!expected.equals(value)) {
-                throw new IllegalStateException(expected + " vs. " + value);
+            try {
+                value = tree.remove(key);
+            } catch (Exception err) {
+                throw new IllegalStateException("key=" + key, err);
+            }
+            
+            if (!key.equals(value)) {
+                throw new IllegalStateException(key + " vs. " + value);
+            }
+        }
+    }
+    
+    private static void test2() {
+        TupleBinding<String, String> binding 
+            = DefaultTupleBinding.create(StringBinding.BINDING);
+        
+        NodeProvider provider 
+            = new MemoryNodeProvider(3);
+        
+        String[] keys = "C N G A H E K Q M F W L T Z D P R X Y S".split(" ");
+        
+        BeeTree<String, String> tree 
+            = new BeeTree<String, String>(provider, binding);
+    
+        int index = 0;
+        for (String key : keys) {
+            tree.put(key, key);
+            
+            ++index;
+            
+            if (key.equals("Q") || key.equals("M") || key.equals("T")) {
+                System.out.println(key);
+                System.out.println(tree);
+                System.out.println(provider);
+            }
+            
+            switch (index) {
+                case 4:
+                case 5:
+                case 9:
+                    System.out.println("INDEX: " + index);
+                    System.out.println(tree);
+                    System.out.println(provider);
+                    break;
             }
         }
         
-        for (int i = 0; i < 10; i++) {
-            System.out.println(tree.get("Hello-" + i));
+        System.out.println(tree);
+        System.out.println(provider);
+    }
+    
+    public static void main(String[] args) throws InterruptedException {
+        /*for (int i = 0; i < 1000; i++) {
+            test();
         }*/
         
-        //provider.close();
+        test2();
     }
 }
