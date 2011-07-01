@@ -17,7 +17,33 @@ public class Main {
         BeeTree<String, String> tree 
             = new BeeTree<String, String>(provider, binding);
         
-        System.out.println(tree.size());
+        tree.put("5", "5");
+        tree.put("9", "9");
+        tree.put("3", "3");
+        System.out.println(provider);
+        
+        tree.put("7", "7");
+        System.out.println(provider);
+        
+        tree.put("1", "1");
+        System.out.println(provider);
+        
+        tree.put("2", "2");
+        System.out.println(provider);
+        
+        tree.put("8", "8");
+        System.out.println(provider);
+        
+        tree.put("6", "6");
+        System.out.println(provider);
+        
+        tree.put("0", "0");
+        System.out.println(provider);
+        
+        tree.put("4", "4");
+        System.out.println(provider);
+        
+        /*System.out.println(tree.size());
         
         for (int i = 0; i < 10; i++) {
             tree.put("Hello-" + i, "World-" + i);
@@ -38,7 +64,7 @@ public class Main {
         
         for (int i = 0; i < 10; i++) {
             System.out.println(tree.get("Hello-" + i));
-        }
+        }*/
         
         //provider.close();
     }
