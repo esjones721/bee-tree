@@ -34,7 +34,8 @@ public class MemoryNodeProvider implements NodeProvider {
 
     @Override
     public void free(Node node) {
-        System.out.println("FREE: " + node);
+        //System.out.println("FREE: " + node);
+        //Thread.dumpStack();
         nodes.remove(node.getId());
     }
 

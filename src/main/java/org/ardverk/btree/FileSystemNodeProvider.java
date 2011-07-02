@@ -15,6 +15,8 @@ import java.security.SecureRandom;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.ardverk.btree.io.DataUtils;
 import org.ardverk.btree.io.IoUtils;
@@ -22,22 +24,7 @@ import org.ardverk.btree.io.IoUtils;
 public class FileSystemNodeProvider implements NodeProvider, Closeable {
 
     private final Map<NodeId, Node> nodes 
-            = new LinkedHashMap<NodeId, Node>() {
-        
-        private static final long serialVersionUID = 9040401273752081840L;
-        
-        @Override
-        protected boolean removeEldestEntry(
-                Map.Entry<NodeId, Node> eldest) {
-            
-            if (size() >= p) {
-                store(eldest.getValue());
-                return true;
-            }
-            
-            return false;
-        }
-    };
+            = new LinkedHashMap<NodeId, Node>();
     
     private final File directory;
     
@@ -47,11 +34,13 @@ public class FileSystemNodeProvider implements NodeProvider, Closeable {
     
     private final RootNode root;
     
-    public FileSystemNodeProvider(String path, int t, int p) {
-        this(new File(path), t, p);
+    private final ScheduledFuture<?> future;
+    
+    public FileSystemNodeProvider(String path, int t, int p, long time, TimeUnit unit) {
+        this(new File(path), t, p, time, unit);
     }
     
-    public FileSystemNodeProvider(File directory, int t, int p) {
+    public FileSystemNodeProvider(File directory, int t, int p, long time, TimeUnit unit) {
         this.directory = directory;
         this.t = t;
         this.p = p;
@@ -61,6 +50,15 @@ public class FileSystemNodeProvider implements NodeProvider, Closeable {
         }
         
         root = load(new File(directory, "0"));
+        
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                
+            }
+        };
+        
+        future = null;
     }
     
     public File getDirectory() {
@@ -74,21 +72,29 @@ public class FileSystemNodeProvider implements NodeProvider, Closeable {
 
     @Override
     public Node allocate(int height) {
+        return allocate(height, true);
+    }
+    
+    private Node allocate(int height, boolean put) {
         StringId nodeId = StringId.create();
         Node node = new Node(nodeId, height, t);
-        nodes.put(nodeId, node);
+        Node existing = nodes.put(nodeId, node);
+        if (existing != null) {
+            throw new IllegalStateException();
+        }
         return node;
     }
-
-    @Override
-    public void free(Node node) {
-        NodeId nodeId = node.getId();
-        //nodes.remove(nodeId);
-        //delete(nodeId);
+    
+    private boolean isRoot(NodeId nodeId) {
+        return nodeId.equals(root.getId());
     }
-
+    
     @Override
     public Node get(NodeId nodeId, Intent intent) {
+        if (isRoot(nodeId)) {
+            return root.getRoot();
+        }
+        
         Node node = nodes.get(nodeId);
         if (node == null) {
             node = load(nodeId);
@@ -96,7 +102,14 @@ public class FileSystemNodeProvider implements NodeProvider, Closeable {
         }
         return node;
     }
-    
+
+    @Override
+    public void free(Node node) {
+        NodeId nodeId = node.getId();
+        nodes.remove(nodeId);
+        delete(nodeId);
+    }
+
     @Override
     public void close() {
         
@@ -132,7 +145,7 @@ public class FileSystemNodeProvider implements NodeProvider, Closeable {
         int size = 0;
         
         if (!file.exists()) {
-            node = allocate(0);
+            node = allocate(0, false);
             
         } else {
             StringId nodeId = null;
@@ -152,6 +165,7 @@ public class FileSystemNodeProvider implements NodeProvider, Closeable {
             }
             
             node = load(nodeId);
+            nodes.put(nodeId, node);
         }
         
         return new RootNode(this, node, size);
@@ -221,6 +235,10 @@ public class FileSystemNodeProvider implements NodeProvider, Closeable {
             
             if (0 < height) {
                 int nodeCount = node.getNodeCount();
+                if (tupleCount != nodeCount-1) {
+                    throw new IllegalStateException();
+                }
+                
                 out.writeInt(nodeCount);
                 for (int i = 0; i < nodeCount; i++) {
                     NodeId childId = node.getNode(i);
@@ -238,6 +256,11 @@ public class FileSystemNodeProvider implements NodeProvider, Closeable {
     private void delete(NodeId nodeId) {
         File file = new File(directory, nodeId.toString());
         file.delete();
+    }
+    
+    @Override
+    public String toString() {
+        return nodes.toString();
     }
     
     private static class StringId implements NodeId {

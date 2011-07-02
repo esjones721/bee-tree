@@ -20,21 +20,21 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.ardverk.btree.NodeProvider.Intent;
 
-public class Node extends AbstractNode {
+public class Node extends AbstractNode implements NodeLock {
+    
+    private final ReentrantLock lock = new ReentrantLock();
     
     private final Bucket<Tuple> tuples;
     
     private final Bucket<NodeId> children;
     
     public Node(NodeId nodeId, int height, int t) {
-        /*this(nodeId, height, t, new Bucket<Tuple>(2*t-1), 
-                createBucket(height, 2*t));*/
-        
-        this(nodeId, height, t, new Bucket<Tuple>(4), 
-                createBucket(height, 5));
+        this(nodeId, height, t, new Bucket<Tuple>(2*t-1), 
+                createBucket(height, 2*t));
     }
     
     public Node(NodeId nodeId, int height, int t, 
@@ -54,6 +54,16 @@ public class Node extends AbstractNode {
         assert (children == null || children.getMaxSize() == 2*t);
     }
     
+    @Override
+    public void lock() {
+        lock.lock();
+    }
+
+    @Override
+    public void unlock() {
+        lock.unlock();
+    }
+
     public Bucket<Tuple> getTuples() {
         return tuples;
     }
@@ -84,6 +94,10 @@ public class Node extends AbstractNode {
     
     public Tuple lastTuple() {
         return tuples.getLast();
+    }
+    
+    private Tuple removeFirstTuple() {
+        return tuples.removeFirst();
     }
     
     private Tuple removeLastTuple() {
@@ -240,12 +254,17 @@ public class Node extends AbstractNode {
         return null;
     }
     
-    public Tuple put(NodeProvider provider, byte[] key, byte[] value) {
+    public Tuple put(NodeProvider provider, NodeLock parent, byte[] key, byte[] value) {
         int index = binarySearch(key);
         
         // Replace an existing Key-Value
         if (index >= 0) {
-            return setTuple(index, new Tuple(key, value));
+            try {
+                return setTuple(index, new Tuple(key, value));
+            } finally {
+                unlock();
+                parent.unlock();
+            }
         }
         
         assert (index < 0);
@@ -253,25 +272,48 @@ public class Node extends AbstractNode {
         
         // Found a leaf where it should be stored!
         if (isLeaf()) {
-            assert (!isOverflow());
-            addTuple(index, new Tuple(key, value));
-            return null;
-        }
-        
-        // Keep looking!
-        Node node = getNode(provider, index, Intent.WRITE);
-        
-        if (node.isOverflow()) {
-            TupleNode median = node.split(provider);
-            addTupleNode(index, median);
-            
-            int cmp = TupleUtils.compare(key, median.getKey());
-            if (0 < cmp) {
-                node = getNode(provider, index + 1, Intent.WRITE);
+            try {
+                assert (!isOverflow());
+                addTuple(index, new Tuple(key, value));
+                return null;
+            } finally {
+                unlock();
+                parent.unlock();
             }
         }
         
-        return node.put(provider, key, value);
+        // Keep looking!
+        
+        Node node = getNode(provider, index, Intent.WRITE);
+        
+        boolean success = false;
+        
+        node.lock();
+        try {
+            if (node.isOverflow()) {
+                TupleNode median = node.split(provider);
+                addTupleNode(index, median);
+                
+                int cmp = TupleUtils.compare(key, median.getKey());
+                if (0 < cmp) {
+                    node.unlock();
+                    
+                    node = getNode(provider, index + 1, Intent.WRITE);
+                    node.lock();
+                }
+            }
+            
+            parent.unlock();
+            
+            Tuple tuple = node.put(provider, this, key, value);
+            success = true;
+            return tuple;
+            
+        } finally {
+            if (!success) {
+                node.unlock();
+            }
+        }
     }
     
     public Tuple remove(NodeProvider provider, byte[] key) {
@@ -361,7 +403,7 @@ public class Node extends AbstractNode {
             
             // Borrow tuple from right sibling
             if (right != null && !right.isUnderflow()) {
-                Tuple first = right.removeLastTuple();
+                Tuple first = right.removeFirstTuple();
                 Tuple tuple = setTuple(index, first);
                 node.addTuple(tuple);
                 
@@ -382,7 +424,7 @@ public class Node extends AbstractNode {
                 } else {
                     
                     Tuple median = removeTuple(index);
-                    removeNode(index);
+                    removeNode(index+1);
                     
                     node.mergeWithRight(median, right);
                     

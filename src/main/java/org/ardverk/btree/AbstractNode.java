@@ -27,13 +27,11 @@ abstract class AbstractNode {
     }
 
     public boolean isOverflow() {
-        //return getTupleCount() >= 2*t-1;
-        return getTupleCount() >= 4;
+        return getTupleCount() >= 2*t-1;
     }
 
     public boolean isUnderflow() {
-        //return getTupleCount() < t;
-        return getTupleCount() < 2;
+        return getTupleCount() < t;
     }
 
     public boolean isLeaf() {

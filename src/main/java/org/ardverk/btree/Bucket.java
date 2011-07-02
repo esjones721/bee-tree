@@ -89,8 +89,7 @@ public class Bucket<E> implements List<E>, RandomAccess, Serializable {
         RangeCheck(index);
         
         if (size >= elements.length) {
-            System.out.println(toString());
-            throw new ArrayIndexOutOfBoundsException("Max Size");
+            throw new ArrayIndexOutOfBoundsException("Max Size: " + elements.length);
         }
         
         System.arraycopy(elements, index, elements, index+1, size-index);
