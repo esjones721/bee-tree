@@ -11,4 +11,5 @@ In particular the way Iterators work needs to be changed.
 
 Vision: A full blown implementation of Rodeh's B-Tree in Java. These
 B-Trees are Copy-on-Write (CoW) friendly and are the magic ingredient 
-behind ZFS and Btrfs. 
+of ZFS and Btrfs. For further information see Ohad Rodeh's research
+paper and presentation in the docs directory.
