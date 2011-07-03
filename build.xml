@@ -41,8 +41,8 @@
 	
 	<target name="dist" depends="jar">
 		<mkdir dir="${dist.dir}"/>
-		<copy file="README.md" todir="${dist.dir}" failonerror="false"/>
-		<copy file="LICENSE" todir="${dist.dir}" failonerror="false"/>
+		<copy file="README.txt" todir="${dist.dir}" failonerror="false"/>
+		<copy file="LICENSE.txt" todir="${dist.dir}" failonerror="false"/>
 	    <copy file="${jar.file}" todir="${dist.dir}"/>
 	</target>
 	
