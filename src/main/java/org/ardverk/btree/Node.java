@@ -20,13 +20,10 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.ardverk.btree.NodeProvider.Intent;
 
-public class Node extends AbstractNode implements NodeLock {
-    
-    private final ReentrantLock lock = new ReentrantLock();
+public class Node extends AbstractNode {
     
     private final Bucket<Tuple> tuples;
     
@@ -52,16 +49,6 @@ public class Node extends AbstractNode implements NodeLock {
         
         assert (tuples.getMaxSize() == 2*t-1);
         assert (children == null || children.getMaxSize() == 2*t);
-    }
-    
-    @Override
-    public void lock() {
-        lock.lock();
-    }
-
-    @Override
-    public void unlock() {
-        lock.unlock();
     }
 
     public Bucket<Tuple> getTuples() {
@@ -254,17 +241,12 @@ public class Node extends AbstractNode implements NodeLock {
         return null;
     }
     
-    public Tuple put(NodeProvider provider, NodeLock parent, byte[] key, byte[] value) {
+    public Tuple put(NodeProvider provider, byte[] key, byte[] value) {
         int index = binarySearch(key);
         
         // Replace an existing Key-Value
         if (index >= 0) {
-            try {
-                return setTuple(index, new Tuple(key, value));
-            } finally {
-                unlock();
-                parent.unlock();
-            }
+            return setTuple(index, new Tuple(key, value));
         }
         
         assert (index < 0);
@@ -272,48 +254,25 @@ public class Node extends AbstractNode implements NodeLock {
         
         // Found a leaf where it should be stored!
         if (isLeaf()) {
-            try {
-                assert (!isOverflow());
-                addTuple(index, new Tuple(key, value));
-                return null;
-            } finally {
-                unlock();
-                parent.unlock();
-            }
+            assert (!isOverflow());
+            addTuple(index, new Tuple(key, value));
+            return null;
         }
         
         // Keep looking!
-        
         Node node = getNode(provider, index, Intent.WRITE);
         
-        boolean success = false;
-        
-        node.lock();
-        try {
-            if (node.isOverflow()) {
-                TupleNode median = node.split(provider);
-                addTupleNode(index, median);
-                
-                int cmp = TupleUtils.compare(key, median.getKey());
-                if (0 < cmp) {
-                    node.unlock();
-                    
-                    node = getNode(provider, index + 1, Intent.WRITE);
-                    node.lock();
-                }
-            }
+        if (node.isOverflow()) {
+            TupleNode median = node.split(provider);
+            addTupleNode(index, median);
             
-            parent.unlock();
-            
-            Tuple tuple = node.put(provider, this, key, value);
-            success = true;
-            return tuple;
-            
-        } finally {
-            if (!success) {
-                node.unlock();
+            int cmp = TupleUtils.compare(key, median.getKey());
+            if (0 < cmp) {
+                node = getNode(provider, index + 1, Intent.WRITE);
             }
         }
+        
+        return node.put(provider, key, value);
     }
     
     public Tuple remove(NodeProvider provider, byte[] key) {

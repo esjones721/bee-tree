@@ -6,7 +6,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MemoryNodeProvider implements NodeProvider {
 
-    private final Map<NodeId, Node> nodes = new HashMap<NodeId, Node>();
+    private final Map<NodeId, Node> nodes 
+        = new HashMap<NodeId, Node>();
     
     private final int t;
     
@@ -34,8 +35,6 @@ public class MemoryNodeProvider implements NodeProvider {
 
     @Override
     public void free(Node node) {
-        //System.out.println("FREE: " + node);
-        //Thread.dumpStack();
         nodes.remove(node.getId());
     }
 

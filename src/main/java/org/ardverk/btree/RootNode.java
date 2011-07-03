@@ -1,14 +1,11 @@
 package org.ardverk.btree;
 
 import java.util.Iterator;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.ardverk.btree.Node.TupleNode;
 import org.ardverk.btree.NodeProvider.Intent;
 
-public class RootNode implements NodeLock {
-    
-    private final ReentrantLock lock = new ReentrantLock();
+public class RootNode {
     
     private final NodeProvider provider;
     
@@ -30,59 +27,27 @@ public class RootNode implements NodeLock {
         return root;
     }
     
-    @Override
-    public void lock() {
-        lock.lock();
-    }
-
-    @Override
-    public void unlock() {
-        lock.unlock();
-    }
-
     public Tuple put(byte[] key, byte[] value) {
-        boolean success = false;
-        
-        lock();
-        try {
-            root.lock();
-            try {
-                if (root.isOverflow()) {
-                    TupleNode median = root.split(provider);
-                    
-                    int height = root.getHeight() + 1;
-                    Node tmp = provider.allocate(height);
-                    
-                    tmp.addFirstNode(root.getId());
-                    tmp.addTupleNode(median);
-                    
-                    System.out.println("BLA: " + root + ", " + root.getId() + " to " + tmp.getId());
-                    
-                    root.unlock();
-                    
-                    root = tmp;
-                    root.lock();
-                }
-                
-                Tuple tuple = root.put(provider, this, key, value);
-                
-                // A new Key-Value was inserted!
-                if (tuple == null) {
-                    ++size;
-                }
-                
-                success = true;
-                return tuple;
-            } finally {
-                if (!success) {
-                    root.unlock();
-                }
-            }
-        } finally {
-            if (!success) {
-                unlock();
-            }
+        if (root.isOverflow()) {
+            TupleNode median = root.split(provider);
+            
+            int height = root.getHeight() + 1;
+            Node tmp = provider.allocate(height);
+            
+            tmp.addFirstNode(root.getId());
+            tmp.addTupleNode(median);
+            
+            root = tmp;
         }
+        
+        Tuple tuple = root.put(provider, key, value);
+        
+        // A new Key-Value was inserted!
+        if (tuple == null) {
+            ++size;
+        }
+        
+        return tuple;
     }
     
     public Tuple remove(byte[] key) {
@@ -92,7 +57,6 @@ public class RootNode implements NodeLock {
             Node tmp = root.firstChildNode(
                     provider, Intent.READ);
             
-            System.out.println("OLD: " + root.getId() + " , NEW: " + tmp.getId());
             provider.free(root);
             root = tmp;
         }
